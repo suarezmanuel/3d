@@ -70,8 +70,8 @@ class mesh {
                 for (let line of lines) {
                     if (line.startsWith('v ')) {
                         const coords = line.split(' ');
-                        const x = parseFloat(coords[1]);
-                        const y = parseFloat(coords[2]);
+                        const x = -parseFloat(coords[1]);
+                        const y = -parseFloat(coords[2]);
                         const z = parseFloat(coords[3]);
                         vertices.push(new vec3d(x, y, z));
                     }
