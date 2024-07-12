@@ -46,7 +46,7 @@ class vec3d {
     }
 }
 class triangle3d {
-    constructor(a, b, c, color = 255) {
+    constructor(a, b, c, color = "rgb( 255 255 255 )") {
         this.p = [a, b, c];
         this.color = color;
     }
@@ -244,14 +244,18 @@ function triangle_clip_against_plane(plane_point, plane_normal, in_tri, out_tri,
     }
     if (insidePointCount == 1 && outsidePointCount == 2) {
         out_tri.color = in_tri.color;
+        // out_tri.color = "rgb( 80, 255, 80)";
         out_tri.p[0] = inside_points[0];
         out_tri.p[1] = vector_intersect_plane(plane_point, plane_normal, inside_points[0], outside_points[0]);
         out_tri.p[2] = vector_intersect_plane(plane_point, plane_normal, inside_points[0], outside_points[1]);
         return 1;
     }
     if (insidePointCount == 2 && outsidePointCount == 1) {
+        // out_tri.color = "rgb( 255, 80, 80)";
+        // out_tri2.color =  "rgb( 80, 80, 255)";
         out_tri.color = in_tri.color;
         out_tri2.color = in_tri.color;
+        // console.log("kaka");
         out_tri.p[0] = inside_points[0];
         out_tri.p[1] = inside_points[1];
         out_tri.p[2] = vector_intersect_plane(plane_point, plane_normal, inside_points[0], outside_points[0]);
@@ -388,7 +392,7 @@ class Scene {
     }
     fill2d_triangle(a1, a2, b1, b2, c1, c2, color) {
         // we want to color in a grey scale, color is from 0 to 255
-        this.ctx.fillStyle = "rgb(" + color + " " + color + " " + color + ")";
+        this.ctx.fillStyle = color;
         this.ctx.beginPath();
         this.ctx.moveTo(a1, a2);
         this.ctx.lineTo(b1, b2);
@@ -493,13 +497,16 @@ class Scene {
                 let clipped_triangle_count = 0;
                 let clipped = [new triangle3d(new vec3d(), new vec3d(), new vec3d()), new triangle3d(new vec3d(), new vec3d(), new vec3d())];
                 // clip against z_near plane, normal is along the z axis
-                clipped_triangle_count = triangle_clip_against_plane(new vec3d(0, 0, 0.01), new vec3d(0, 0, 1), triViewed, clipped[0], clipped[1]);
+                clipped_triangle_count = triangle_clip_against_plane(new vec3d(0, 0, 0.1), new vec3d(0, 0, 1), triViewed, clipped[0], clipped[1]);
                 // console.log(clipped_triangle_count);
                 for (let n = 0; n < clipped_triangle_count; n++) {
-                    // console.log(clipped[n].p[0]);
-                    // console.log(clipped[n].p[1]);
-                    // console.log(clipped[n].p[2]);
-                    triProjected.color = clipped[n].color;
+                    // light shines on player, if normal is towards player it should be lighter
+                    let vLight = new vec3d(0, 0, -1);
+                    // normalize light source
+                    vLight = vLight.normalize();
+                    let color = normal.dot_product(vLight);
+                    triProjected.color = "rgb( " + (color + 1) * (255 / 2) + " " + (color + 1) * (255 / 2) + " " + (color + 1) * (255 / 2) + ")";
+                    // triProjected.color = clipped[n].color;
                     // project triangle from 3D to 2D
                     proj_mat.vec_matrix_multiply(clipped[n].p[0], triProjected.p[0]);
                     proj_mat.vec_matrix_multiply(clipped[n].p[1], triProjected.p[1]);
@@ -517,13 +524,8 @@ class Scene {
                     triProjected.p[0] = triProjected.p[0].mult_vector_vector(vecScale);
                     triProjected.p[1] = triProjected.p[1].mult_vector_vector(vecScale);
                     triProjected.p[2] = triProjected.p[2].mult_vector_vector(vecScale);
-                    // light shines on player, if normal is towards player it should be lighter
-                    let vLight = new vec3d(0, 0, -1);
-                    // normalize light source
-                    vLight = vLight.normalize();
-                    let color = normal.dot_product(vLight);
-                    triProjected.color = (color + 1) * (255 / 2);
                     trisToRaster.push(triProjected);
+                    triProjected = new triangle3d(new vec3d(), new vec3d(), new vec3d());
                 }
             }
         });
@@ -532,58 +534,50 @@ class Scene {
             let z2 = (tri2.p[0].v[2] + tri2.p[1].v[2] + tri2.p[2].v[2]) / 3;
             return (z1 > z2) ? -1 : 1;
         });
-        // trisToRaster.forEach((tri: triangle3d) => {
-        //     let listTriangles: triangle3d[] = [];
-        //     listTriangles.push(tri);
-        //     let newTrianglesCount = 1;
-        //     let clipped = [new triangle3d(new vec3d(),new vec3d(),new vec3d()), new triangle3d(new vec3d(),new vec3d(),new vec3d())];
-        //     // test triangle against each screen border plane
-        //     for (let p=0; p < 4; p++) {
-        //         let trisToAdd = 0;
-        //         while (newTrianglesCount > 0) {
-        //             let test = listTriangles.pop()!;
-        //             // if (test == undefined) {console.log("scream");}
-        //             newTrianglesCount--;
-        //             trisToAdd = triangle_clip_against_plane(new vec3d(20,0,0), new vec3d(1,0,0), test!, clipped[0], clipped[1]);
-        //             // console.log("kakakkakka");
-        //             switch(p) {
-        //                 case 0:
-        //                     trisToAdd = triangle_clip_against_plane(new vec3d(0,0,0), new vec3d(0,1,0), test, clipped[0], clipped[1]);
-        //                     break;
-        //                 case 1:
-        //                     trisToAdd = triangle_clip_against_plane(new vec3d(0,this.canvas.height -1,0), new vec3d(0,-1,0), test, clipped[0], clipped[1]);
-        //                     break;
-        //                 case 2:
-        //                     trisToAdd = triangle_clip_against_plane(new vec3d(20,0,0), new vec3d(1,0,0), test, clipped[0], clipped[1]);
-        //                     break;
-        //                 case 3:
-        //                     trisToAdd = triangle_clip_against_plane(new vec3d(this.canvas.width -20,0,0), new vec3d(-1,0,0), test, clipped[0], clipped[1]);
-        //                     break;
-        //             }
-        //             for (let w = 0; w < trisToAdd; w++) {
-        //                 listTriangles.push(clipped[w]);
-        //             }
-        //         }
-        //         newTrianglesCount = listTriangles.length;
-        //     }
-        //     listTriangles.forEach((tri: triangle3d) => {
-        //         // rasterizing triangles
-        //         this.draw2d_triangle(tri.p[0].v[0],tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1]);
-        //         this.fill2d_triangle(tri.p[0].v[0],tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1], tri.color);
-        //     })
-        // });
-        console.log(this.Znear);
         trisToRaster.forEach((tri) => {
-            // tri.p[0].v[0] *= -1;
-            // tri.p[1].v[0] *= -1;
-            // tri.p[2].v[0] *= -1;
-            // tri.p[0].v[1] *= -1;
-            // tri.p[1].v[1] *= -1;
-            // tri.p[2].v[1] *= -1;
-            // rasterizing triangles
-            this.draw2d_triangle(tri.p[0].v[0], tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1]);
-            this.fill2d_triangle(tri.p[0].v[0], tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1], tri.color);
+            let listTriangles = [];
+            listTriangles.push(tri);
+            let newTrianglesCount = 1;
+            let clipped = [new triangle3d(new vec3d(), new vec3d(), new vec3d()), new triangle3d(new vec3d(), new vec3d(), new vec3d())];
+            // test triangle against each screen border plane
+            for (let p = 0; p < 4; p++) {
+                let trisToAdd = 0;
+                while (newTrianglesCount > 0) {
+                    let test = listTriangles.pop();
+                    newTrianglesCount--;
+                    switch (p) {
+                        case 0:
+                            trisToAdd = triangle_clip_against_plane(new vec3d(0, 0, 0), new vec3d(0, 1, 0), test, clipped[0], clipped[1]);
+                            break;
+                        case 1:
+                            trisToAdd = triangle_clip_against_plane(new vec3d(0, this.canvas.height - 1, 0), new vec3d(0, -1, 0), test, clipped[0], clipped[1]);
+                            break;
+                        case 2:
+                            trisToAdd = triangle_clip_against_plane(new vec3d(20, 0, 0), new vec3d(1, 0, 0), test, clipped[0], clipped[1]);
+                            break;
+                        case 3:
+                            trisToAdd = triangle_clip_against_plane(new vec3d(this.canvas.width - 20, 0, 0), new vec3d(-1, 0, 0), test, clipped[0], clipped[1]);
+                            break;
+                    }
+                    for (let w = 0; w < trisToAdd; w++) {
+                        listTriangles.unshift(clipped[w]);
+                    }
+                    clipped = [new triangle3d(new vec3d(), new vec3d(), new vec3d()), new triangle3d(new vec3d(), new vec3d(), new vec3d())];
+                }
+                newTrianglesCount = listTriangles.length;
+            }
+            listTriangles.forEach((tri) => {
+                // rasterizing triangles
+                this.draw2d_triangle(tri.p[0].v[0], tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1]);
+                this.fill2d_triangle(tri.p[0].v[0], tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1], tri.color);
+            });
         });
+        // console.log(this.Znear);
+        // trisToRaster.forEach((tri: triangle3d) => {
+        //     // rasterizing triangles
+        //     this.draw2d_triangle(tri.p[0].v[0],tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1]);
+        //     this.fill2d_triangle(tri.p[0].v[0],tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1], tri.color);
+        // });
     }
     start() {
         var interval = setInterval(() => {
