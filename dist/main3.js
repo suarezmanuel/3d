@@ -8,6 +8,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+class _number {
+    constructor() {
+        this.val = 0;
+    }
+}
+class vec2d {
+    constructor(u = 0, v = 0) {
+        this.u = u;
+        this.v = v;
+    }
+}
 class vec3d {
     constructor(x = 0, y = 0, z = 0, w = 1) {
         this.v = [x, y, z, w];
@@ -46,8 +57,9 @@ class vec3d {
     }
 }
 class triangle3d {
-    constructor(a, b, c, color = "rgb( 255 255 255 )") {
+    constructor(a, b, c, d = new vec2d(), e = new vec2d(), f = new vec2d(), color = "rgb( 255 255 255 )") {
         this.p = [a, b, c];
+        this.t = [d, e, f];
         this.color = color;
     }
 }
@@ -90,6 +102,22 @@ class mesh {
                 console.error('Failed to fetch file:', error);
             }
         });
+    }
+    setCubeMesh() {
+        this.tris = [
+            new triangle3d(new vec3d(0, 0, 0), new vec3d(0, 1, 0), new vec3d(1, 1, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
+            new triangle3d(new vec3d(0, 0, 0), new vec3d(1, 1, 0), new vec3d(1, 0, 0), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+            new triangle3d(new vec3d(1, 0, 0), new vec3d(1, 1, 0), new vec3d(1, 1, 1), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
+            new triangle3d(new vec3d(1, 0, 0), new vec3d(1, 1, 1), new vec3d(1, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+            new triangle3d(new vec3d(0, 1, 0), new vec3d(0, 1, 1), new vec3d(1, 1, 1), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
+            new triangle3d(new vec3d(0, 1, 0), new vec3d(1, 1, 1), new vec3d(1, 1, 0), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+            new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 0, 0), new vec3d(1, 0, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
+            new triangle3d(new vec3d(0, 0, 1), new vec3d(1, 0, 0), new vec3d(1, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+            new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 1, 1), new vec3d(0, 1, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
+            new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 1, 0), new vec3d(0, 0, 0), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+            new triangle3d(new vec3d(1, 0, 1), new vec3d(1, 1, 1), new vec3d(0, 1, 1), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
+            new triangle3d(new vec3d(1, 0, 1), new vec3d(0, 1, 1), new vec3d(0, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+        ];
     }
 }
 class mat4x4 {
@@ -186,14 +214,14 @@ function mat_make_trans(x, y, z) {
     return trans_matrix;
 }
 // returns either the intersection vector or nothing
-function vector_intersect_plane(plane_point, plane_normal, line_start, line_end) {
+function vector_intersect_plane(plane_point, plane_normal, line_start, line_end, t) {
     plane_normal = plane_normal.normalize();
     let plane_d = -plane_normal.dot_product(plane_point);
     let ad = line_start.dot_product(plane_normal);
     let bd = line_end.dot_product(plane_normal);
-    let t = (-plane_d - ad) / (bd - ad);
+    t.val = (-plane_d - ad) / (bd - ad);
     let line_start_to_end = line_end.sub_vector(line_start);
-    let line_to_intersect = line_start_to_end.mult_vector_scalar(t);
+    let line_to_intersect = line_start_to_end.mult_vector_scalar(t.val);
     return line_start.add_vector(line_to_intersect);
 }
 function distance_point_to_plane(plane_normal, plane_point, point) {
@@ -205,29 +233,39 @@ function triangle_clip_against_plane(plane_point, plane_normal, in_tri, out_tri,
     plane_normal = plane_normal.normalize();
     let insidePointCount = 0;
     let outsidePointCount = 0;
+    let insideTexCount = 0;
+    let outsideTexCount = 0;
     let inside_points = [new vec3d(), new vec3d(), new vec3d()];
     let outside_points = [new vec3d(), new vec3d(), new vec3d()];
+    let inside_tex = [new vec2d(), new vec2d(), new vec2d()];
+    let outside_tex = [new vec2d(), new vec2d(), new vec2d()];
     // get distance from each vertex of triangle to plane
     let d0 = distance_point_to_plane(plane_normal, plane_point, in_tri.p[0]);
     let d1 = distance_point_to_plane(plane_normal, plane_point, in_tri.p[1]);
     let d2 = distance_point_to_plane(plane_normal, plane_point, in_tri.p[2]);
     if (d0 >= 0) {
         inside_points[insidePointCount++] = in_tri.p[0];
+        inside_tex[insideTexCount++] = in_tri.t[0];
     }
     else {
         outside_points[outsidePointCount++] = in_tri.p[0];
+        outside_tex[outsideTexCount++] = in_tri.t[0];
     }
     if (d1 >= 0) {
         inside_points[insidePointCount++] = in_tri.p[1];
+        inside_tex[insideTexCount++] = in_tri.t[1];
     }
     else {
         outside_points[outsidePointCount++] = in_tri.p[1];
+        outside_tex[outsideTexCount++] = in_tri.t[1];
     }
     if (d2 >= 0) {
         inside_points[insidePointCount++] = in_tri.p[2];
+        inside_tex[insideTexCount++] = in_tri.t[2];
     }
     else {
         outside_points[outsidePointCount++] = in_tri.p[2];
+        outside_tex[outsideTexCount++] = in_tri.t[2];
     }
     // outside of plane
     if (insidePointCount == 0) {
@@ -236,9 +274,6 @@ function triangle_clip_against_plane(plane_point, plane_normal, in_tri, out_tri,
     if (insidePointCount == 3) {
         // no changes were made
         out_tri.color = in_tri.color;
-        // out_tri.p[0] = in_tri.p[0];
-        // out_tri.p[1] = in_tri.p[1];
-        // out_tri.p[2] = in_tri.p[2];
         out_tri.p = [...in_tri.p];
         return 1;
     }
@@ -246,8 +281,14 @@ function triangle_clip_against_plane(plane_point, plane_normal, in_tri, out_tri,
         out_tri.color = in_tri.color;
         // out_tri.color = "rgb( 80, 255, 80)";
         out_tri.p[0] = inside_points[0];
-        out_tri.p[1] = vector_intersect_plane(plane_point, plane_normal, inside_points[0], outside_points[0]);
-        out_tri.p[2] = vector_intersect_plane(plane_point, plane_normal, inside_points[0], outside_points[1]);
+        out_tri.t[0] = inside_tex[0];
+        let t = new _number();
+        out_tri.p[1] = vector_intersect_plane(plane_point, plane_normal, inside_points[0], outside_points[0], t);
+        out_tri.t[1].u = t.val * (outside_tex[0].u - inside_tex[0].u) + inside_tex[0].u;
+        out_tri.t[1].v = t.val * (outside_tex[0].v - inside_tex[0].v) + inside_tex[0].v;
+        out_tri.p[2] = vector_intersect_plane(plane_point, plane_normal, inside_points[0], outside_points[1], t);
+        out_tri.t[2].u = t.val * (outside_tex[0].u - inside_tex[0].u) + inside_tex[0].u;
+        out_tri.t[2].v = t.val * (outside_tex[0].v - inside_tex[0].v) + inside_tex[0].v;
         return 1;
     }
     if (insidePointCount == 2 && outsidePointCount == 1) {
@@ -255,13 +296,21 @@ function triangle_clip_against_plane(plane_point, plane_normal, in_tri, out_tri,
         // out_tri2.color =  "rgb( 80, 80, 255)";
         out_tri.color = in_tri.color;
         out_tri2.color = in_tri.color;
-        // console.log("kaka");
         out_tri.p[0] = inside_points[0];
         out_tri.p[1] = inside_points[1];
-        out_tri.p[2] = vector_intersect_plane(plane_point, plane_normal, inside_points[0], outside_points[0]);
+        out_tri.t[0] = inside_tex[0];
+        out_tri.t[1] = inside_tex[1];
+        let t = new _number();
+        out_tri.p[2] = vector_intersect_plane(plane_point, plane_normal, inside_points[0], outside_points[0], t);
+        out_tri.t[2].u = t.val * (outside_tex[0].u - inside_tex[0].u) + inside_tex[0].u;
+        out_tri.t[2].v = t.val * (outside_tex[0].v - inside_tex[0].v) + inside_tex[0].v;
         out_tri2.p[0] = inside_points[1];
-        out_tri2.p[1] = vector_intersect_plane(plane_point, plane_normal, inside_points[0], outside_points[0]);
-        out_tri2.p[2] = vector_intersect_plane(plane_point, plane_normal, inside_points[1], outside_points[0]);
+        out_tri2.p[1] = out_tri.p[2];
+        out_tri2.t[0] = inside_tex[1];
+        out_tri2.t[1] = outside_tex[2];
+        out_tri2.p[2] = vector_intersect_plane(plane_point, plane_normal, inside_points[1], outside_points[0], t);
+        out_tri2.t[2].u = t.val * (outside_tex[0].u - inside_tex[1].u) + inside_tex[0].u;
+        out_tri2.t[2].v = t.val * (outside_tex[0].v - inside_tex[1].v) + inside_tex[0].v;
         return 2;
     }
     return 0;
@@ -324,7 +373,7 @@ function quick_inverse(mat) {
 class Scene {
     ;
     constructor() {
-        this.meshCub = new mesh([new triangle3d(new vec3d(), new vec3d(), new vec3d())]);
+        this.meshCub = new mesh([new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d())]);
         this.vLookDirection = new vec3d();
         this.Znear = 0.01;
         this.Zfar = 100;
@@ -342,7 +391,8 @@ class Scene {
         this.keys = {};
         this.canvas = document.getElementById('canvas');
         this.ctx = this.canvas.getContext("2d");
-        this.meshCub.setMeshFromFile("../axis.obj");
+        // this.meshCub.setMeshFromFile("../mountains.obj");
+        this.meshCub.setCubeMesh();
         this.AspectRatio = this.canvas.height / this.canvas.width;
         this.FovRad = 1 / Math.tan((this.Fov * 0.5) * (Math.PI / 180));
         document.getElementById('Fov').addEventListener('input', (event) => {
@@ -482,6 +532,9 @@ class Scene {
             world_mat.vec_matrix_multiply(tri.p[0], triRotated.p[0]);
             world_mat.vec_matrix_multiply(tri.p[1], triRotated.p[1]);
             world_mat.vec_matrix_multiply(tri.p[2], triRotated.p[2]);
+            triRotated.t[0] = tri.t[0];
+            triRotated.t[1] = tri.t[1];
+            triRotated.t[2] = tri.t[2];
             let line1 = triRotated.p[1].sub_vector(triRotated.p[0]);
             let line2 = triRotated.p[2].sub_vector(triRotated.p[0]);
             let normal = line1.cross_product(line2);
@@ -493,9 +546,13 @@ class Scene {
                 matView.vec_matrix_multiply(triRotated.p[0], triViewed.p[0]);
                 matView.vec_matrix_multiply(triRotated.p[1], triViewed.p[1]);
                 matView.vec_matrix_multiply(triRotated.p[2], triViewed.p[2]);
+                triViewed.t[0] = triRotated.t[0];
+                triViewed.t[1] = triRotated.t[2];
+                triViewed.t[2] = triRotated.t[1];
                 triViewed.color = triRotated.color;
                 let clipped_triangle_count = 0;
-                let clipped = [new triangle3d(new vec3d(), new vec3d(), new vec3d()), new triangle3d(new vec3d(), new vec3d(), new vec3d())];
+                let clipped = [new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(0, 1), new vec2d(0, 1), new vec2d(1, 0)), new triangle3d(new vec3d(), new vec3d(), new vec3d())];
+                let t = 0;
                 // clip against z_near plane, normal is along the z axis
                 clipped_triangle_count = triangle_clip_against_plane(new vec3d(0, 0, 0.1), new vec3d(0, 0, 1), triViewed, clipped[0], clipped[1]);
                 // console.log(clipped_triangle_count);
@@ -511,7 +568,10 @@ class Scene {
                     proj_mat.vec_matrix_multiply(clipped[n].p[0], triProjected.p[0]);
                     proj_mat.vec_matrix_multiply(clipped[n].p[1], triProjected.p[1]);
                     proj_mat.vec_matrix_multiply(clipped[n].p[2], triProjected.p[2]);
-                    triProjected.color = clipped[n].color;
+                    // triProjected.color = clipped[n].color;
+                    triProjected.t[0] = clipped[n].t[0];
+                    triProjected.t[1] = clipped[n].t[1];
+                    triProjected.t[2] = clipped[n].t[2];
                     // scale triangle into view, was previously in vec_matrix_multiply, but removed for conciseness
                     triProjected.p[0] = triProjected.p[0].div_vector(triProjected.p[0].v[3]);
                     triProjected.p[1] = triProjected.p[1].div_vector(triProjected.p[1].v[3]);
@@ -538,7 +598,7 @@ class Scene {
             let listTriangles = [];
             listTriangles.push(tri);
             let newTrianglesCount = 1;
-            let clipped = [new triangle3d(new vec3d(), new vec3d(), new vec3d()), new triangle3d(new vec3d(), new vec3d(), new vec3d())];
+            let clipped = [new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(0, 1), new vec2d(0, 1), new vec2d(1, 0)), new triangle3d(new vec3d(), new vec3d(), new vec3d())];
             // test triangle against each screen border plane
             for (let p = 0; p < 4; p++) {
                 let trisToAdd = 0;
@@ -562,14 +622,14 @@ class Scene {
                     for (let w = 0; w < trisToAdd; w++) {
                         listTriangles.unshift(clipped[w]);
                     }
-                    clipped = [new triangle3d(new vec3d(), new vec3d(), new vec3d()), new triangle3d(new vec3d(), new vec3d(), new vec3d())];
+                    clipped = [new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(0, 1), new vec2d(0, 1), new vec2d(1, 0)), new triangle3d(new vec3d(), new vec3d(), new vec3d())];
                 }
                 newTrianglesCount = listTriangles.length;
             }
             listTriangles.forEach((tri) => {
                 // rasterizing triangles
                 this.draw2d_triangle(tri.p[0].v[0], tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1]);
-                this.fill2d_triangle(tri.p[0].v[0], tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1], tri.color);
+                // this.fill2d_triangle(tri.p[0].v[0],tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1], tri.color);
             });
         });
         // console.log(this.Znear);
