@@ -16,7 +16,7 @@ module.exports = {
   },
   output: {
     filename: 'bundle.js',
-    path: path.resolve(__dirname, 'dist'),
+    path: path.resolve(__dirname, 'dst'),
   },
   target: 'web', // Ensure this is set to 'web' for browser compatibility
 };

@@ -145,7 +145,7 @@ class mesh {
     }
 }
 
-class Sprite {
+class sprite {
     
     private pngData: Uint8Array | null = null;
     private width: number = 0;
@@ -498,15 +498,15 @@ class Scene {
     // key is keyboard button name, true if held down
     private keys: { [key: string]: boolean } = {}
 
-    private spriteTexture1: sprite;
+    // private spriteTexture1: sprite = new sprite();
 
     constructor() {
 
         this.canvas = document.getElementById('canvas') as HTMLCanvasElement;
         this.ctx = this.canvas.getContext("2d")!;
 
-        // this.meshCub.setMeshFromFile("../mountains.obj");
-        this.spriteTexture1 = new sprite("../jario")
+        this.meshCub.setMeshFromFile("../resources/mountains.obj");
+        // this.spriteTexture1 = new sprite("../jario")
         this.meshCub.setCubeMesh();
 
         this.AspectRatio = this.canvas.height / this.canvas.width;
@@ -710,7 +710,7 @@ class Scene {
                     tex_v = (1-t) * tex_sv + t*tex_ev;
                     
                     // paint the pixel j i
-                    draw(j, i, tex.sample_color(tex_u, tex_v));
+                    // draw(j, i, tex.sample_color(tex_u, tex_v));
                     t += tstep;
                 }
             }
@@ -768,7 +768,7 @@ class Scene {
                     tex_v = (1-t) * tex_sv + t*tex_ev;
                     
                     // paint the pixel j i
-                    draw(j, i, tex.sample_color(tex_u, tex_v));
+                    // draw(j, i, tex.sample_color(tex_u, tex_v));
                     t += tstep;
                 }
             }
@@ -996,10 +996,10 @@ class Scene {
                             trisToAdd = triangle_clip_against_plane(new vec3d(0,this.canvas.height -1,0), new vec3d(0,-1,0), test, clipped[0], clipped[1]);
                             break;
                         case 2:
-                            trisToAdd = triangle_clip_against_plane(new vec3d(20,0,0), new vec3d(1,0,0), test, clipped[0], clipped[1]);
+                            trisToAdd = triangle_clip_against_plane(new vec3d(1,0,0), new vec3d(1,0,0), test, clipped[0], clipped[1]);
                             break;
                         case 3:
-                            trisToAdd = triangle_clip_against_plane(new vec3d(this.canvas.width-20,0,0), new vec3d(-1,0,0), test, clipped[0], clipped[1]);
+                            trisToAdd = triangle_clip_against_plane(new vec3d(this.canvas.width-1,0,0), new vec3d(-1,0,0), test, clipped[0], clipped[1]);
                             break;
                     }
 
@@ -1019,8 +1019,8 @@ class Scene {
                 //                        tri.p[1].v[0],tri.p[1].v[1], tri.t[1].u, tri.t[1].v, 
                 //                        tri.p[2].v[0],tri.p[2].v[1], tri.t[2].u, tri.t[2].v, jario_texture);
 
-                this.draw2d_triangle(tri.p[0].v[0],tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1]);
-                // this.fill2d_triangle(tri.p[0].v[0],tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1], tri.color);
+                // this.draw2d_triangle(tri.p[0].v[0],tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1]);
+                this.fill2d_triangle(tri.p[0].v[0],tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1], tri.color);
             })
         });
 

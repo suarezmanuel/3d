@@ -120,6 +120,49 @@ class mesh {
         ];
     }
 }
+class sprite {
+    constructor(sprite) {
+        this.pngData = null;
+        this.width = 0;
+        this.height = 0;
+        this.loadSprite(sprite);
+    }
+    loadSprite(url) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const response = yield fetch(url);
+                const arrayBuffer = yield response.arrayBuffer();
+                this.pngData = new Uint8Array(arrayBuffer);
+                // Parse PNG header to get width and height
+                // PNG width is at byte offset 16, height at 20
+                this.width = this.readUint32(16);
+                this.height = this.readUint32(20);
+                console.log(`Loaded PNG: ${this.width}x${this.height}`);
+            }
+            catch (error) {
+                console.error('Failed to load image:', error);
+            }
+        });
+    }
+    readUint32(offset) {
+        return (this.pngData[offset] << 24) | (this.pngData[offset + 1] << 16) |
+            (this.pngData[offset + 2] << 8) | this.pngData[offset + 3];
+    }
+    // Note: This method won't work correctly for most PNGs due to compression
+    // It's here to demonstrate the concept, but won't give correct results
+    getPixelColor(i, j) {
+        if (!this.pngData) {
+            throw new Error('Image not loaded');
+        }
+        // This is a simplification and won't work for actual PNG data
+        const index = (i * this.width + j) * 4 + 8; // +8 for PNG header
+        const r = this.pngData[index];
+        const g = this.pngData[index + 1];
+        const b = this.pngData[index + 2];
+        const a = this.pngData[index + 3];
+        return "rgba(${r}, ${g}, ${b}, ${a / 255})";
+    }
+}
 class mat4x4 {
     constructor() {
         this.mat = [];
@@ -372,6 +415,7 @@ function quick_inverse(mat) {
 }
 class Scene {
     ;
+    // private spriteTexture1: sprite = new sprite();
     constructor() {
         this.meshCub = new mesh([new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d())]);
         this.vLookDirection = new vec3d();
@@ -391,7 +435,8 @@ class Scene {
         this.keys = {};
         this.canvas = document.getElementById('canvas');
         this.ctx = this.canvas.getContext("2d");
-        // this.meshCub.setMeshFromFile("../mountains.obj");
+        this.meshCub.setMeshFromFile("../resources/mountains.obj");
+        // this.spriteTexture1 = new sprite("../jario")
         this.meshCub.setCubeMesh();
         this.AspectRatio = this.canvas.height / this.canvas.width;
         this.FovRad = 1 / Math.tan((this.Fov * 0.5) * (Math.PI / 180));
@@ -449,6 +494,160 @@ class Scene {
         this.ctx.lineTo(c1, c2);
         this.ctx.closePath();
         this.ctx.fill();
+    }
+    textured_triangle(x1, y1, u1, v1, x2, y2, u2, v2, x3, y3, u3, v3, tex) {
+        // sort y values and their texture values
+        let t = 0;
+        let tex_u = 0;
+        let tex_v = 0;
+        if (y2 < y1) {
+            t = y1;
+            y1 = y2;
+            y2 = t;
+            t = x1;
+            x1 = x2;
+            x2 = t;
+            t = u1;
+            u1 = u2;
+            u2 = t;
+            t = v1;
+            v1 = v2;
+            v2 = t;
+        }
+        if (y3 < y1) {
+            t = y1;
+            y1 = y3;
+            y3 = t;
+            t = x1;
+            x1 = x3;
+            x3 = t;
+            t = u1;
+            u1 = u3;
+            u3 = t;
+            t = v1;
+            v1 = v3;
+            v3 = t;
+        }
+        if (y3 < y2) {
+            t = y2;
+            y2 = y3;
+            y3 = t;
+            t = x2;
+            x2 = x3;
+            x3 = t;
+            t = u2;
+            u2 = u3;
+            u3 = t;
+            t = v2;
+            v2 = v3;
+            v3 = t;
+        }
+        let dy1 = y2 - y1;
+        let dx1 = x2 - x1;
+        let dv1 = v2 - v1;
+        let du1 = u2 - u1;
+        let dy2 = y3 - y1;
+        let dx2 = x3 - x1;
+        let dv2 = v3 - v1;
+        let du2 = u3 - u1;
+        let dax_step = 0;
+        let dbx_step = 0;
+        let du1_step = 0;
+        let dv1_step = 0;
+        let du2_step = 0;
+        let dv2_step = 0;
+        if (dy1)
+            dax_step = dx1 / Math.abs(dy1);
+        if (dy2)
+            dbx_step = dx2 / Math.abs(dy2);
+        if (dy1)
+            du1_step = du1 / Math.abs(dy1);
+        if (dy1)
+            dv1_step = dv1 / Math.abs(dy1);
+        if (dy2)
+            du2_step = du2 / Math.abs(dy2);
+        if (dy2)
+            dv2_step = dv2 / Math.abs(dy2);
+        if (dy1) {
+            for (let i = y1; i <= y2; i++) {
+                let ax = x1 + (i - y1) * dax_step;
+                let bx = x1 + (i - y1) * dbx_step;
+                let tex_su = u1 + (i - y1) * du1_step;
+                let tex_sv = v1 + (i - y1) * dv1_step;
+                let tex_eu = u1 + (i - y1) * du2_step;
+                let tex_ev = v1 + (i - y1) * dv2_step;
+                // sort by x values
+                if (ax > bx) {
+                    t = ax;
+                    ax = bx;
+                    bx = t;
+                    t = tex_su;
+                    tex_su = tex_eu;
+                    tex_eu = t;
+                    t = tex_sv;
+                    tex_sv = tex_ev;
+                    tex_ev = t;
+                }
+                tex_u = tex_su;
+                tex_v = tex_sv;
+                // 1 / scan_line_length
+                let tstep = 1 / (bx - ax);
+                t = 0;
+                for (let j = ax; j < bx; j++) {
+                    tex_u = (1 - t) * tex_su + t * tex_eu;
+                    tex_v = (1 - t) * tex_sv + t * tex_ev;
+                    // paint the pixel j i
+                    // draw(j, i, tex.sample_color(tex_u, tex_v));
+                    t += tstep;
+                }
+            }
+            dy1 = y3 - y2;
+            dx1 = x3 - x2;
+            dv1 = v3 - v2;
+            du1 = u3 - u2;
+            if (dy1)
+                dax_step = dx1 / Math.abs(dy1);
+            if (dy2)
+                dbx_step = dx2 / Math.abs(dy2);
+            du1_step = 0;
+            dv1_step = 0;
+            if (dy1)
+                du1_step = du1 / Math.abs(dy1);
+            if (dy1)
+                dv1_step = dv1 / Math.abs(dy1);
+            for (let i = y2; i <= y3; i++) {
+                let ax = x2 + (i - y2) * dax_step;
+                let bx = x1 + (i - y1) * dbx_step;
+                let tex_su = u2 + (i - y2) * du1_step;
+                let tex_sv = v2 + (i - y2) * dv1_step;
+                let tex_eu = u1 + (i - y1) * du2_step;
+                let tex_ev = v1 + (i - y1) * dv2_step;
+                // sort by x values
+                if (ax > bx) {
+                    t = ax;
+                    ax = bx;
+                    bx = t;
+                    t = tex_su;
+                    tex_su = tex_eu;
+                    tex_eu = t;
+                    t = tex_sv;
+                    tex_sv = tex_ev;
+                    tex_ev = t;
+                }
+                tex_u = tex_su;
+                tex_v = tex_sv;
+                // 1 / scan_line_length
+                let tstep = 1 / (bx - ax);
+                t = 0;
+                for (let j = ax; j < bx; j++) {
+                    tex_u = (1 - t) * tex_su + t * tex_eu;
+                    tex_v = (1 - t) * tex_sv + t * tex_ev;
+                    // paint the pixel j i
+                    // draw(j, i, tex.sample_color(tex_u, tex_v));
+                    t += tstep;
+                }
+            }
+        }
     }
     move_camera_up(n) {
         this.vCamera.v[1] -= n;
@@ -613,10 +812,10 @@ class Scene {
                             trisToAdd = triangle_clip_against_plane(new vec3d(0, this.canvas.height - 1, 0), new vec3d(0, -1, 0), test, clipped[0], clipped[1]);
                             break;
                         case 2:
-                            trisToAdd = triangle_clip_against_plane(new vec3d(20, 0, 0), new vec3d(1, 0, 0), test, clipped[0], clipped[1]);
+                            trisToAdd = triangle_clip_against_plane(new vec3d(1, 0, 0), new vec3d(1, 0, 0), test, clipped[0], clipped[1]);
                             break;
                         case 3:
-                            trisToAdd = triangle_clip_against_plane(new vec3d(this.canvas.width - 20, 0, 0), new vec3d(-1, 0, 0), test, clipped[0], clipped[1]);
+                            trisToAdd = triangle_clip_against_plane(new vec3d(this.canvas.width - 1, 0, 0), new vec3d(-1, 0, 0), test, clipped[0], clipped[1]);
                             break;
                     }
                     for (let w = 0; w < trisToAdd; w++) {
@@ -628,8 +827,11 @@ class Scene {
             }
             listTriangles.forEach((tri) => {
                 // rasterizing triangles
-                this.draw2d_triangle(tri.p[0].v[0], tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1]);
-                // this.fill2d_triangle(tri.p[0].v[0],tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1], tri.color);
+                // this.textured_triangle(tri.p[0].v[0],tri.p[0].v[1], tri.t[0].u, tri.t[0].v, 
+                //                        tri.p[1].v[0],tri.p[1].v[1], tri.t[1].u, tri.t[1].v, 
+                //                        tri.p[2].v[0],tri.p[2].v[1], tri.t[2].u, tri.t[2].v, jario_texture);
+                // this.draw2d_triangle(tri.p[0].v[0],tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1]);
+                this.fill2d_triangle(tri.p[0].v[0], tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1], tri.color);
             });
         });
         // console.log(this.Znear);
