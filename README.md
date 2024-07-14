@@ -24,7 +24,7 @@ rotate using `a`, `d` and go forwards, backwards with `w`, `s`.
 
 the source files such as the html file you see in the images and the source code lie on `src/`. <br/>
 to compile the project, run the `tsc` command in the terminal while in the projects' root folder. <br/>
-you will see the compiled `main3.ts` file in `dist/` directory, which is `main3.js`. <br/> <br/> 
+you will see the compiled `main.ts` file in `dst/` directory, which is `main.js`. <br/> <br/> 
 from there you will need to host an http server because my code apparently violates some CORS policy. <br/>
 e.g. `python -m http.server`, and then goto `localhost:8000` on your browser or wherever it's hosted. <br/> 
 more specifically, goto `localhost:8000/src/main.html`. 
@@ -35,4 +35,7 @@ more specifically, goto `localhost:8000/src/main.html`.
 ![image](https://github.com/user-attachments/assets/127db743-b622-4931-9259-37a37132891c)
 
 ![image](https://github.com/user-attachments/assets/8c2e6f79-8bdf-4eb0-bfca-a3f577033e24)
+
+<img width="613" alt="image" src="https://github.com/user-attachments/assets/e37d12a8-07b8-4a45-9c0a-3fa6b5367bc6">
+
 
