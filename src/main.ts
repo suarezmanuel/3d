@@ -1,3 +1,6 @@
+// import png from '../node_modules/simplepngjs/dist/index.js'
+import { png_sampler, sample_rectangle } from './png2.js';
+
 class _number {
     public val = 0;
 }
@@ -146,53 +149,7 @@ class mesh {
 }
 
 class sprite {
-    
-    private pngData: Uint8Array | null = null;
-    private width: number = 0;
-    private height: number = 0;
 
-    constructor(sprite: string) {
-        this.loadSprite(sprite);
-    }
-
-    async loadSprite(url: string): Promise<void> {
-        try {
-            const response = await fetch(url);
-            const arrayBuffer = await response.arrayBuffer();
-            this.pngData = new Uint8Array(arrayBuffer);
-            
-            // Parse PNG header to get width and height
-            // PNG width is at byte offset 16, height at 20
-            this.width = this.readUint32(16);
-            this.height = this.readUint32(20);
-
-            console.log(`Loaded PNG: ${this.width}x${this.height}`);
-        } catch (error) {
-            console.error('Failed to load image:', error);
-        }
-    }
-
-    private readUint32(offset: number): number {
-        return (this.pngData![offset] << 24) | (this.pngData![offset + 1] << 16) |
-               (this.pngData![offset + 2] << 8) | this.pngData![offset + 3];
-    }
-
-    // Note: This method won't work correctly for most PNGs due to compression
-    // It's here to demonstrate the concept, but won't give correct results
-    getPixelColor(i: number, j: number): string {
-        if (!this.pngData) {
-            throw new Error('Image not loaded');
-        }
-        
-        // This is a simplification and won't work for actual PNG data
-        const index = (i * this.width + j) * 4 + 8; // +8 for PNG header
-        const r = this.pngData[index];
-        const g = this.pngData[index + 1];
-        const b = this.pngData[index + 2];
-        const a = this.pngData[index + 3];
-        
-        return "rgba(${r}, ${g}, ${b}, ${a / 255})";
-    }
 }
 
 class mat4x4 {
@@ -470,6 +427,7 @@ class Scene {
     public canvas: HTMLCanvasElement;
     private ctx: CanvasRenderingContext2D;
     private meshCub = new mesh([new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d())]);;
+    private image: png_sampler;
 
     private vCamera: vec3d;
     private vLookDirection: vec3d = new vec3d();
@@ -505,7 +463,9 @@ class Scene {
         this.canvas = document.getElementById('canvas') as HTMLCanvasElement;
         this.ctx = this.canvas.getContext("2d")!;
 
-        this.meshCub.setMeshFromFile("../resources/mountains.obj");
+        // this.meshCub.setMeshFromFile("../resources/mountains.obj");
+        this.image = new png_sampler ();
+
         // this.spriteTexture1 = new sprite("../jario")
         this.meshCub.setCubeMesh();
 
@@ -551,6 +511,11 @@ class Scene {
         this.fYaw = 0;
     }
 
+    async initalize() {
+
+        await this.image.init_sampler("../files/image.png");
+    }
+
     draw2d_triangle(a1: number, a2: number, b1: number, b2: number, c1: number, c2: number) {
         this.ctx.beginPath();
         this.ctx.moveTo(a1, a2);
@@ -579,202 +544,145 @@ class Scene {
     }
 
     textured_triangle(x1: number, y1: number, u1: number, v1: number,
-                      x2: number, y2: number, u2: number, v2: number,
-                      x3: number, y3: number, u3: number, v3: number,
-                      tex: sprite) {
+        x2: number, y2: number, u2: number, v2: number,
+        x3: number, y3: number, u3: number, v3: number,
+        tex: png_sampler, ctx: CanvasRenderingContext2D) {
 
-        // sort y values and their texture values
-        let t = 0;
-        let tex_u = 0;
-        let tex_v = 0;
+// Sort the vertices by y-coordinate (y1 <= y2 <= y3)
+if (y2 < y1) {
+[x1, x2, y1, y2, u1, u2, v1, v2] = [x2, x1, y2, y1, u2, u1, v2, v1];
+}
+if (y3 < y1) {
+[x1, x3, y1, y3, u1, u3, v1, v3] = [x3, x1, y3, y1, u3, u1, v3, v1];
+}
+if (y3 < y2) {
+[x2, x3, y2, y3, u2, u3, v2, v3] = [x3, x2, y3, y2, u3, u2, v3, v2];
+}
 
-        if (y2 < y1) {
-            t=y1;
-            y1=y2;
-            y2=t;
+// Calculate slopes
+let dy1 = y2 - y1;
+let dx1 = x2 - x1;
+let du1 = u2 - u1;
+let dv1 = v2 - v1;
 
-            t=x1;
-            x1=x2;
-            x2=t;
+let dy2 = y3 - y1;
+let dx2 = x3 - x1;
+let du2 = u3 - u1;
+let dv2 = v3 - v1;
 
-            t=u1;
-            u1=u2;
-            u2=t;
+let tex_u, tex_v;
 
-            t=v1;
-            v1=v2;
-            v2=t;
-        }
+// Calculate step sizes
+let dax_step = 0, dbx_step = 0,
+du1_step = 0, dv1_step = 0,
+du2_step = 0, dv2_step = 0;
 
-        if (y3 < y1) {
-            t=y1;
-            y1=y3;
-            y3=t;
+if (dy1) dax_step = dx1 / Math.abs(dy1);
+if (dy2) dbx_step = dx2 / Math.abs(dy2);
 
-            t=x1;
-            x1=x3;
-            x3=t;
+if (dy1) du1_step = du1 / Math.abs(dy1);
+if (dy1) dv1_step = dv1 / Math.abs(dy1);
 
-            t=u1;
-            u1=u3;
-            u3=t;
+if (dy2) du2_step = du2 / Math.abs(dy2);
+if (dy2) dv2_step = dv2 / Math.abs(dy2);
 
-            t=v1;
-            v1=v3;
-            v3=t;
-        }
+// First half of the triangle
+if (dy1) {
+for (let i = Math.floor(y1); i <= Math.floor(y2); i++) {
+  let ax = x1 + (i - y1) * dax_step;
+  let bx = x1 + (i - y1) * dbx_step;
 
-        if (y3 < y2) {
-            t=y2;
-            y2=y3;
-            y3=t;
+  let tex_su = u1 + (i - y1) * du1_step;
+  let tex_sv = v1 + (i - y1) * dv1_step;
+  let tex_eu = u1 + (i - y1) * du2_step;
+  let tex_ev = v1 + (i - y1) * dv2_step;
 
-            t=x2;
-            x2=x3;
-            x3=t;
+  if (ax > bx) {
+      [ax, bx, tex_su, tex_eu, tex_sv, tex_ev] = [bx, ax, tex_eu, tex_su, tex_ev, tex_sv];
+  }
 
-            t=u2;
-            u2=u3;
-            u3=t;
+  tex_u = tex_su;
+  tex_v = tex_sv;
 
-            t=v2;
-            v2=v3;
-            v3=t;
-        }
+  let tstep = 1 / (bx - ax);
+  let t = 0;
 
-        let dy1 = y2 - y1;
-        let dx1 = x2 - x1;
-        let dv1 = v2 - v1;
-        let du1 = u2 - u1;
+  for (let j = Math.floor(ax); j < Math.floor(bx); j++) {
+      tex_u = (1 - t) * tex_su + t * tex_eu;
+      tex_v = (1 - t) * tex_sv + t * tex_ev;
+      
+      // Clamp texture coordinates to [0, 1] range
+      let u = Math.max(0, Math.min(1, tex_u));
+      let v = Math.max(0, Math.min(1, tex_v));
+      
+      // Scale texture coordinates to image size
+      let px = Math.floor(u * (tex.width - 1));
+      let py = Math.floor(v * (tex.height - 1));
+      
+      let pixel = tex.sample_pixel(px, py);
+      ctx.fillStyle = `rgba(${pixel[0]},${pixel[1]},${pixel[2]},${pixel[3]})`;
+      ctx.fillRect(j, i, 1, 1);
+      
+      t += tstep;
+  }
+}
+}
 
-        let dy2 = y3 - y1;
-        let dx2 = x3 - x1;
-        let dv2 = v3 - v1;
-        let du2 = u3 - u1;
+// Second half of the triangle
+dy1 = y3 - y2;
+dx1 = x3 - x2;
+du1 = u3 - u2;
+dv1 = v3 - v2;
 
-        let dax_step = 0; 
-        let dbx_step = 0;
-        let du1_step = 0; let dv1_step = 0;
-        let du2_step = 0; let dv2_step = 0;
-        
-        if (dy1) dax_step = dx1 / Math.abs(dy1);
-        if (dy2) dbx_step = dx2 / Math.abs(dy2);
+if (dy1) dax_step = dx1 / Math.abs(dy1);
+if (dy2) dbx_step = dx2 / Math.abs(dy2);
 
-        if (dy1) du1_step = du1 / Math.abs(dy1);
-        if (dy1) dv1_step = dv1 / Math.abs(dy1);
+du1_step = 0;
+dv1_step = 0;
+if (dy1) du1_step = du1 / Math.abs(dy1);
+if (dy1) dv1_step = dv1 / Math.abs(dy1);
 
-        if (dy2) du2_step = du2 / Math.abs(dy2);
-        if (dy2) dv2_step = dv2 / Math.abs(dy2);
+if (dy1) {
+for (let i = Math.floor(y2); i <= Math.floor(y3); i++) {
+  let ax = x2 + (i - y2) * dax_step;
+  let bx = x1 + (i - y1) * dbx_step;
 
+  let tex_su = u2 + (i - y2) * du1_step;
+  let tex_sv = v2 + (i - y2) * dv1_step;
+  let tex_eu = u1 + (i - y1) * du2_step;
+  let tex_ev = v1 + (i - y1) * dv2_step;
 
-        if (dy1) {
+  if (ax > bx) {
+      [ax, bx, tex_su, tex_eu, tex_sv, tex_ev] = [bx, ax, tex_eu, tex_su, tex_ev, tex_sv];
+  }
 
-            for (let i=y1; i<=y2; i++) {
+  tex_u = tex_su;
+  tex_v = tex_sv;
 
-                let ax = x1 + (i-y1) * dax_step;
-                let bx = x1 + (i-y1) * dbx_step;
+  let tstep = 1 / (bx - ax);
+  let t = 0;
 
-                let tex_su = u1 + (i - y1) * du1_step;
-                let tex_sv = v1 + (i - y1) * dv1_step;
-
-                let tex_eu = u1 + (i - y1) * du2_step;
-                let tex_ev = v1 + (i - y1) * dv2_step;
-
-
-                // sort by x values
-                if (ax > bx) {
-
-                    t=ax;
-                    ax=bx;
-                    bx=t;
-
-                    t=tex_su;
-                    tex_su=tex_eu;
-                    tex_eu=t;
-
-                    t=tex_sv;
-                    tex_sv=tex_ev;
-                    tex_ev=t;
-                } 
-
-                tex_u = tex_su;
-                tex_v = tex_sv;
-
-                // 1 / scan_line_length
-                let tstep = 1 / (bx - ax);
-                t = 0;
-
-                for (let j = ax; j < bx; j++) {
-                    
-                    tex_u = (1-t) * tex_su + t*tex_eu;
-                    tex_v = (1-t) * tex_sv + t*tex_ev;
-                    
-                    // paint the pixel j i
-                    // draw(j, i, tex.sample_color(tex_u, tex_v));
-                    t += tstep;
-                }
-            }
-
-            dy1 = y3 - y2;
-            dx1 = x3 - x2;
-            dv1 = v3 - v2;
-            du1 = u3 - u2;
-
-            if (dy1) dax_step = dx1 / Math.abs(dy1);
-            if (dy2) dbx_step = dx2 / Math.abs(dy2);
-
-            du1_step = 0; dv1_step = 0;
-            if (dy1) du1_step = du1 / Math.abs(dy1);
-            if (dy1) dv1_step = dv1 / Math.abs(dy1);
-
-            for (let i=y2; i<=y3; i++) {
-
-                let ax = x2 + (i-y2) * dax_step;
-                let bx = x1 + (i-y1) * dbx_step;
-
-                let tex_su = u2 + (i - y2) * du1_step;
-                let tex_sv = v2 + (i - y2) * dv1_step;
-
-                let tex_eu = u1 + (i - y1) * du2_step;
-                let tex_ev = v1 + (i - y1) * dv2_step;
-
-
-                // sort by x values
-                if (ax > bx) {
-
-                    t=ax;
-                    ax=bx;
-                    bx=t;
-
-                    t=tex_su;
-                    tex_su=tex_eu;
-                    tex_eu=t;
-
-                    t=tex_sv;
-                    tex_sv=tex_ev;
-                    tex_ev=t;
-                } 
-
-                tex_u = tex_su;
-                tex_v = tex_sv;
-
-                // 1 / scan_line_length
-                let tstep = 1 / (bx - ax);
-                t = 0;
-
-                for (let j = ax; j < bx; j++) {
-                    
-                    tex_u = (1-t) * tex_su + t*tex_eu;
-                    tex_v = (1-t) * tex_sv + t*tex_ev;
-                    
-                    // paint the pixel j i
-                    // draw(j, i, tex.sample_color(tex_u, tex_v));
-                    t += tstep;
-                }
-            }
-        }
-
-    }
+  for (let j = Math.floor(ax); j < Math.floor(bx); j++) {
+      tex_u = (1 - t) * tex_su + t * tex_eu;
+      tex_v = (1 - t) * tex_sv + t * tex_ev;
+      
+      // Clamp texture coordinates to [0, 1] range
+      let u = Math.max(0, Math.min(1, tex_u));
+      let v = Math.max(0, Math.min(1, tex_v));
+      
+      // Scale texture coordinates to image size
+      let px = Math.floor(u * (tex.width - 1));
+      let py = Math.floor(v * (tex.height - 1));
+      
+      let pixel = tex.sample_pixel(px, py);
+      ctx.fillStyle = `rgba(${pixel[0]},${pixel[1]},${pixel[2]},${pixel[3]})`;
+      ctx.fillRect(j, i, 1, 1);
+      
+      t += tstep;
+  }
+}
+}
+}
 
 
     move_camera_up(n: number) {
@@ -792,7 +700,6 @@ class Scene {
     move_camera_left(n: number) {
         this.vCamera.v[0] -= n;
     }
-    
 
 
     render() {
@@ -885,6 +792,7 @@ class Scene {
             world_mat.vec_matrix_multiply(tri.p[0], triRotated.p[0]);
             world_mat.vec_matrix_multiply(tri.p[1], triRotated.p[1]);
             world_mat.vec_matrix_multiply(tri.p[2], triRotated.p[2]);
+            // pass the texture coordinates forward
             triRotated.t[0] = tri.t[0];
             triRotated.t[1] = tri.t[1];
             triRotated.t[2] = tri.t[2];
@@ -907,15 +815,16 @@ class Scene {
                 matView.vec_matrix_multiply(triRotated.p[0], triViewed.p[0]);
                 matView.vec_matrix_multiply(triRotated.p[1], triViewed.p[1]);
                 matView.vec_matrix_multiply(triRotated.p[2], triViewed.p[2]);
-                triViewed.t[0] = triRotated.t[0];
-                triViewed.t[1] = triRotated.t[2];
-                triViewed.t[2] = triRotated.t[1];
                 triViewed.color = triRotated.color;
+                // pass the texture coordinates forward
+                triViewed.t[0] = triRotated.t[0];
+                triViewed.t[1] = triRotated.t[1];
+                triViewed.t[2] = triRotated.t[2];
 
                 let clipped_triangle_count = 0;
                 let clipped : triangle3d[] = [new triangle3d(new vec3d(),new vec3d(),new vec3d(), new vec2d(0, 1), new vec2d(0, 1), new vec2d(1, 0)), new triangle3d(new vec3d(),new vec3d(),new vec3d())];
 
-                let t = 0;
+                // let t = 0;
                 // clip against z_near plane, normal is along the z axis
                 clipped_triangle_count = triangle_clip_against_plane(new vec3d(0,0,0.1), new vec3d(0,0,1), triViewed, clipped[0], clipped[1]);
                 // console.log(clipped_triangle_count);
@@ -936,14 +845,26 @@ class Scene {
                     proj_mat.vec_matrix_multiply(clipped[n].p[1], triProjected.p[1]);
                     proj_mat.vec_matrix_multiply(clipped[n].p[2], triProjected.p[2]);
                     // triProjected.color = clipped[n].color;
+                    // pass the texture coordinates forward
                     triProjected.t[0] = clipped[n].t[0];
                     triProjected.t[1] = clipped[n].t[1];
                     triProjected.t[2] = clipped[n].t[2];
+
+                    // scale texture coordinates into view
+                    triProjected.t[0].u = triProjected.t[0].u / triProjected.p[0].v[3];
+                    triProjected.t[1].u = triProjected.t[1].u / triProjected.p[1].v[3];
+                    triProjected.t[2].u = triProjected.t[2].u / triProjected.p[2].v[3];
+
+                    triProjected.t[0].u = triProjected.t[0].u / triProjected.p[0].v[3];
+                    triProjected.t[1].u = triProjected.t[1].u / triProjected.p[1].v[3];
+                    triProjected.t[2].u = triProjected.t[2].u / triProjected.p[2].v[3];
+
 
                     // scale triangle into view, was previously in vec_matrix_multiply, but removed for conciseness
                     triProjected.p[0] = triProjected.p[0].div_vector(triProjected.p[0].v[3]);
                     triProjected.p[1] = triProjected.p[1].div_vector(triProjected.p[1].v[3]);
                     triProjected.p[2] = triProjected.p[2].div_vector(triProjected.p[2].v[3]);
+
 
                     let vecOffset = new vec3d(1,1,0,0);
                     triProjected.p[0] = triProjected.p[0].add_vector(vecOffset);
@@ -987,7 +908,6 @@ class Scene {
                     let test = listTriangles.pop()!;
                     newTrianglesCount--;
 
-
                     switch(p) {
                         case 0:
                             trisToAdd = triangle_clip_against_plane(new vec3d(0,0,0), new vec3d(0,1,0), test, clipped[0], clipped[1]);
@@ -1013,14 +933,16 @@ class Scene {
                 newTrianglesCount = listTriangles.length;
             }
 
+
+
             listTriangles.forEach((tri: triangle3d) => {
                 // rasterizing triangles
-                // this.textured_triangle(tri.p[0].v[0],tri.p[0].v[1], tri.t[0].u, tri.t[0].v, 
-                //                        tri.p[1].v[0],tri.p[1].v[1], tri.t[1].u, tri.t[1].v, 
-                //                        tri.p[2].v[0],tri.p[2].v[1], tri.t[2].u, tri.t[2].v, jario_texture);
+                this.textured_triangle(tri.p[0].v[0],tri.p[0].v[1], tri.t[0].u, tri.t[0].v, 
+                                       tri.p[1].v[0],tri.p[1].v[1], tri.t[1].u, tri.t[1].v, 
+                                       tri.p[2].v[0],tri.p[2].v[1], tri.t[2].u, tri.t[2].v, this.image, this.ctx);
 
                 // this.draw2d_triangle(tri.p[0].v[0],tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1]);
-                this.fill2d_triangle(tri.p[0].v[0],tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1], tri.color);
+                // this.fill2d_triangle(tri.p[0].v[0],tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1], tri.color);
             })
         });
 
@@ -1041,7 +963,29 @@ class Scene {
             this.render();
         }, this.interval);
     }
+
+    async displaySampledTexture() {
+        try {
+            // const canvas = await sample_rectangle(0, 0, 1024, 512, "../files/minecraft_0.png");
+            const canvas = await sample_rectangle(80, 80, 16, 16, "../files/image.png");
+            const container = document.getElementById('sampledTexture');
+            if (container) {
+                container.appendChild(canvas);
+            } else {
+                console.error("Container not found");
+            }
+        } catch (error) {
+            console.error("Error sampling rectangle:", error);
+        }
+    }
 }
 
-const scene = new Scene();
-scene.start();
+async function initAndStart () {
+
+    const scene = new Scene();
+    await scene.initalize();
+    scene.displaySampledTexture();
+    scene.start();
+}
+
+initAndStart().catch(console.error);

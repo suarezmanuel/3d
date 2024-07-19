@@ -1,9 +1,11 @@
 {
   "devDependencies": {
     "@types/node": "^20.14.10",
+    "@types/pngjs": "^6.0.5",
     "typescript": "^5.5.3"
   },
   "dependencies": {
+    "pngjs": "^7.0.0",
     "ts-loader": "^9.5.1",
     "webpack": "^5.92.1",
     "webpack-cli": "^5.1.4"
