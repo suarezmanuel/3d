@@ -58,7 +58,7 @@ class vec3d {
     }
 }
 class triangle3d {
-    constructor(a, b, c, d = new vec2d(), e = new vec2d(), f = new vec2d(), color = "rgb( 255 255 255 )") {
+    constructor(a, b, c, d, e, f, color = "rgb( 255 255 255 )") {
         this.p = [a, b, c];
         this.t = [d, e, f];
         this.color = color;
@@ -93,7 +93,7 @@ class mesh {
                         const v1 = vertices[parseInt(polys[1].split('/')[0]) - 1];
                         const v2 = vertices[parseInt(polys[2].split('/')[0]) - 1];
                         const v3 = vertices[parseInt(polys[3].split('/')[0]) - 1];
-                        this.tris.push(new triangle3d(v1, v2, v3));
+                        this.tris.push(new triangle3d(v1, v2, v3, new vec2d(), new vec2d(), new vec2d()));
                     }
                 }
                 // console.log(this.tris);
@@ -278,6 +278,7 @@ function triangle_clip_against_plane(plane_point, plane_normal, in_tri, out_tri,
         // no changes were made
         out_tri.color = in_tri.color;
         out_tri.p = [...in_tri.p];
+        out_tri.t = [...in_tri.t];
         return 1;
     }
     if (insidePointCount == 1 && outsidePointCount == 2) {
@@ -290,8 +291,8 @@ function triangle_clip_against_plane(plane_point, plane_normal, in_tri, out_tri,
         out_tri.t[1].u = t.val * (outside_tex[0].u - inside_tex[0].u) + inside_tex[0].u;
         out_tri.t[1].v = t.val * (outside_tex[0].v - inside_tex[0].v) + inside_tex[0].v;
         out_tri.p[2] = vector_intersect_plane(plane_point, plane_normal, inside_points[0], outside_points[1], t);
-        out_tri.t[2].u = t.val * (outside_tex[0].u - inside_tex[0].u) + inside_tex[0].u;
-        out_tri.t[2].v = t.val * (outside_tex[0].v - inside_tex[0].v) + inside_tex[0].v;
+        out_tri.t[2].u = t.val * (outside_tex[1].u - inside_tex[0].u) + inside_tex[0].u;
+        out_tri.t[2].v = t.val * (outside_tex[1].v - inside_tex[0].v) + inside_tex[0].v;
         return 1;
     }
     if (insidePointCount == 2 && outsidePointCount == 1) {
@@ -308,12 +309,12 @@ function triangle_clip_against_plane(plane_point, plane_normal, in_tri, out_tri,
         out_tri.t[2].u = t.val * (outside_tex[0].u - inside_tex[0].u) + inside_tex[0].u;
         out_tri.t[2].v = t.val * (outside_tex[0].v - inside_tex[0].v) + inside_tex[0].v;
         out_tri2.p[0] = inside_points[1];
-        out_tri2.p[1] = out_tri.p[2];
         out_tri2.t[0] = inside_tex[1];
-        out_tri2.t[1] = outside_tex[2];
+        out_tri2.p[1] = out_tri.p[2];
+        out_tri2.t[1] = out_tri.t[2];
         out_tri2.p[2] = vector_intersect_plane(plane_point, plane_normal, inside_points[1], outside_points[0], t);
-        out_tri2.t[2].u = t.val * (outside_tex[0].u - inside_tex[1].u) + inside_tex[0].u;
-        out_tri2.t[2].v = t.val * (outside_tex[0].v - inside_tex[1].v) + inside_tex[0].v;
+        out_tri2.t[2].u = t.val * (outside_tex[0].u - inside_tex[1].u) + inside_tex[1].u;
+        out_tri2.t[2].v = t.val * (outside_tex[0].v - inside_tex[1].v) + inside_tex[1].v;
         return 2;
     }
     return 0;
@@ -652,8 +653,9 @@ class Scene {
         world_mat = world_mat.mat_multiply(mat_make_trans(0, 0, this.distance));
         let proj_mat = mat_make_projection(this.FovRad, this.AspectRatio, this.Znear, this.Zfar);
         this.meshCub.tris.forEach((tri) => {
-            let triRotated = new triangle3d(new vec3d(), new vec3d(), new vec3d());
-            let triViewed = new triangle3d(new vec3d(), new vec3d(), new vec3d());
+            let triRotated = new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d());
+            let triViewed = new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d());
+            console.log("tri", tri);
             world_mat.vec_matrix_multiply(tri.p[0], triRotated.p[0]);
             world_mat.vec_matrix_multiply(tri.p[1], triRotated.p[1]);
             world_mat.vec_matrix_multiply(tri.p[2], triRotated.p[2]);
@@ -661,13 +663,15 @@ class Scene {
             triRotated.t[0] = tri.t[0];
             triRotated.t[1] = tri.t[1];
             triRotated.t[2] = tri.t[2];
+            // console.log("rotated", triRotated);
             let line1 = triRotated.p[1].sub_vector(triRotated.p[0]);
             let line2 = triRotated.p[2].sub_vector(triRotated.p[0]);
             let normal = line1.cross_product(line2);
             normal = normal.normalize();
             let camRay = triRotated.p[0].sub_vector(this.vCamera);
             if (normal.dot_product(camRay) < 0) {
-                let triProjected = new triangle3d(new vec3d(), new vec3d(), new vec3d());
+                let triProjected = new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d());
+                console.log("rotated", triRotated);
                 // convert world space to view space
                 matView.vec_matrix_multiply(triRotated.p[0], triViewed.p[0]);
                 matView.vec_matrix_multiply(triRotated.p[1], triViewed.p[1]);
@@ -677,8 +681,11 @@ class Scene {
                 triViewed.t[0] = triRotated.t[0];
                 triViewed.t[1] = triRotated.t[1];
                 triViewed.t[2] = triRotated.t[2];
+                // console.log("rotated", triRotated);
+                // console.log("viewed", triViewed);
                 let clipped_triangle_count = 0;
-                let clipped = [new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(0, 1), new vec2d(0, 1), new vec2d(1, 0)), new triangle3d(new vec3d(), new vec3d(), new vec3d())];
+                let clipped = [new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d()),
+                    new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d())];
                 // let t = 0;
                 // clip against z_near plane, normal is along the z axis
                 clipped_triangle_count = triangle_clip_against_plane(new vec3d(0, 0, 0.1), new vec3d(0, 0, 1), triViewed, clipped[0], clipped[1]);
@@ -704,9 +711,9 @@ class Scene {
                     triProjected.t[0].u = triProjected.t[0].u / triProjected.p[0].v[3];
                     triProjected.t[1].u = triProjected.t[1].u / triProjected.p[1].v[3];
                     triProjected.t[2].u = triProjected.t[2].u / triProjected.p[2].v[3];
-                    triProjected.t[0].u = triProjected.t[0].u / triProjected.p[0].v[3];
-                    triProjected.t[1].u = triProjected.t[1].u / triProjected.p[1].v[3];
-                    triProjected.t[2].u = triProjected.t[2].u / triProjected.p[2].v[3];
+                    triProjected.t[0].v = triProjected.t[0].v / triProjected.p[0].v[3];
+                    triProjected.t[1].v = triProjected.t[1].v / triProjected.p[1].v[3];
+                    triProjected.t[2].v = triProjected.t[2].v / triProjected.p[2].v[3];
                     // scale triangle into view, was previously in vec_matrix_multiply, but removed for conciseness
                     triProjected.p[0] = triProjected.p[0].div_vector(triProjected.p[0].v[3]);
                     triProjected.p[1] = triProjected.p[1].div_vector(triProjected.p[1].v[3]);
@@ -720,7 +727,7 @@ class Scene {
                     triProjected.p[1] = triProjected.p[1].mult_vector_vector(vecScale);
                     triProjected.p[2] = triProjected.p[2].mult_vector_vector(vecScale);
                     trisToRaster.push(triProjected);
-                    triProjected = new triangle3d(new vec3d(), new vec3d(), new vec3d());
+                    triProjected = new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d());
                 }
             }
         });
@@ -733,7 +740,8 @@ class Scene {
             let listTriangles = [];
             listTriangles.push(tri);
             let newTrianglesCount = 1;
-            let clipped = [new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(0, 1), new vec2d(0, 1), new vec2d(1, 0)), new triangle3d(new vec3d(), new vec3d(), new vec3d())];
+            let clipped = [new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d()),
+                new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d())];
             // test triangle against each screen border plane
             for (let p = 0; p < 4; p++) {
                 let trisToAdd = 0;
@@ -757,7 +765,9 @@ class Scene {
                     for (let w = 0; w < trisToAdd; w++) {
                         listTriangles.unshift(clipped[w]);
                     }
-                    clipped = [new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(0, 1), new vec2d(0, 1), new vec2d(1, 0)), new triangle3d(new vec3d(), new vec3d(), new vec3d())];
+                    // console.log("kaka")
+                    clipped = [new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d()),
+                        new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d())];
                 }
                 newTrianglesCount = listTriangles.length;
             }
