@@ -58,15 +58,16 @@ class vec3d {
     }
 }
 class triangle3d {
-    constructor(a, b, c, d, e, f, color = "rgb( 255 255 255 )") {
+    constructor(a, b, c, d, e, f, color = "rgb(255,255,255)") {
         this.p = [a, b, c];
         this.t = [d, e, f];
+        // this.t = [new vec2d(d.u, d.v), new vec2d(e.u, e.v), new vec2d(f.u, f.v)];
         this.color = color;
     }
 }
 class mesh {
-    constructor(tris) {
-        this.tris = tris;
+    constructor() {
+        this.tris = [];
     }
     setMeshFromFile(file) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -120,8 +121,6 @@ class mesh {
             new triangle3d(new vec3d(1, 0, 1), new vec3d(0, 1, 1), new vec3d(0, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
         ];
     }
-}
-class sprite {
 }
 class mat4x4 {
     constructor() {
@@ -375,10 +374,9 @@ function quick_inverse(mat) {
     return matrix;
 }
 class Scene {
-    ;
     // private spriteTexture1: sprite = new sprite();
     constructor() {
-        this.meshCub = new mesh([new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d())]);
+        this.me = new mesh();
         this.vLookDirection = new vec3d();
         this.Znear = 0.01;
         this.Zfar = 100;
@@ -396,10 +394,12 @@ class Scene {
         this.keys = {};
         this.canvas = document.getElementById('canvas');
         this.ctx = this.canvas.getContext("2d");
-        // this.meshCub.setMeshFromFile("../resources/mountains.obj");
+        // this.m.setMeshFromFile("../resources/mountains.obj");
         this.image = new png_sampler();
         // this.spriteTexture1 = new sprite("../jario")
-        this.meshCub.setCubeMesh();
+        this.me.setCubeMesh();
+        // here the first two triangles have already the texture coordinates zeroed
+        console.log("after mesh init", this.me);
         this.AspectRatio = this.canvas.height / this.canvas.width;
         this.FovRad = 1 / Math.tan((this.Fov * 0.5) * (Math.PI / 180));
         document.getElementById('Fov').addEventListener('input', (event) => {
@@ -652,10 +652,10 @@ class Scene {
         world_mat = world_mat.mat_multiply(mat_make_rotY(this.fTheta));
         world_mat = world_mat.mat_multiply(mat_make_trans(0, 0, this.distance));
         let proj_mat = mat_make_projection(this.FovRad, this.AspectRatio, this.Znear, this.Zfar);
-        this.meshCub.tris.forEach((tri) => {
+        this.me.tris.forEach((tri) => {
             let triRotated = new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d());
             let triViewed = new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d());
-            console.log("tri", tri);
+            // console.log("tri", tri);
             world_mat.vec_matrix_multiply(tri.p[0], triRotated.p[0]);
             world_mat.vec_matrix_multiply(tri.p[1], triRotated.p[1]);
             world_mat.vec_matrix_multiply(tri.p[2], triRotated.p[2]);
@@ -671,7 +671,8 @@ class Scene {
             let camRay = triRotated.p[0].sub_vector(this.vCamera);
             if (normal.dot_product(camRay) < 0) {
                 let triProjected = new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d());
-                console.log("rotated", triRotated);
+                // console.log("tri", tri);
+                // console.log("rotated", triRotated);
                 // convert world space to view space
                 matView.vec_matrix_multiply(triRotated.p[0], triViewed.p[0]);
                 matView.vec_matrix_multiply(triRotated.p[1], triViewed.p[1]);
@@ -681,7 +682,6 @@ class Scene {
                 triViewed.t[0] = triRotated.t[0];
                 triViewed.t[1] = triRotated.t[1];
                 triViewed.t[2] = triRotated.t[2];
-                // console.log("rotated", triRotated);
                 // console.log("viewed", triViewed);
                 let clipped_triangle_count = 0;
                 let clipped = [new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d()),
@@ -816,9 +816,14 @@ class Scene {
 function initAndStart() {
     return __awaiter(this, void 0, void 0, function* () {
         const scene = new Scene();
+        console.log(scene.me);
         yield scene.initalize();
         scene.displaySampledTexture();
         scene.start();
     });
 }
 initAndStart().catch(console.error);
+// let m = new mesh();
+// m.setCubeMesh();
+// // here the first two triangles have already the texture coordinates zeroed
+// console.log("after mesh init", m);

@@ -10,7 +10,7 @@ class vec2d {
     public u: number;
     public v: number;
 
-    constructor (u: number=0, v:number=0) {
+    constructor (u: number=0, v: number=0) {
         this.u = u;
         this.v = v; 
     }
@@ -67,13 +67,14 @@ class vec3d {
 }
 
 class triangle3d {
-
     public p: [vec3d, vec3d, vec3d];
     public t: [vec2d, vec2d, vec2d];
     public color: string;
-    constructor(a: vec3d, b: vec3d, c: vec3d, d: vec2d, e: vec2d, f: vec2d, color="rgb( 255 255 255 )") {
+
+    constructor(a: vec3d, b: vec3d, c: vec3d, d: vec2d, e: vec2d, f: vec2d, color="rgb(255,255,255)") {
         this.p = [a, b, c];
         this.t = [d, e, f];
+        // this.t = [new vec2d(d.u, d.v), new vec2d(e.u, e.v), new vec2d(f.u, f.v)];
         this.color = color;
     }
 }
@@ -82,8 +83,8 @@ class mesh {
 
     public tris: triangle3d[];
 
-    constructor(tris: triangle3d[]) {
-        this.tris = tris;
+    constructor() {
+        this.tris = [];
     }
 
     async setMeshFromFile(file: string) {
@@ -125,8 +126,9 @@ class mesh {
             console.error('Failed to fetch file:', error);
         }
     }
-
+    
     setCubeMesh() {
+
         this.tris = [
             new triangle3d(new vec3d(0, 0, 0), new vec3d(0, 1, 0), new vec3d(1, 1, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
             new triangle3d(new vec3d(0, 0, 0), new vec3d(1, 1, 0), new vec3d(1, 0, 0), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
@@ -140,17 +142,13 @@ class mesh {
             new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 0, 0), new vec3d(1, 0, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
             new triangle3d(new vec3d(0, 0, 1), new vec3d(1, 0, 0), new vec3d(1, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
             
-            new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 1, 1), new vec3d(0, 1, 0), new vec2d(0, 1), new vec2d(0 , 0), new vec2d(1, 0)),
+            new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 1, 1), new vec3d(0, 1, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
             new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 1, 0), new vec3d(0, 0, 0), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
             
             new triangle3d(new vec3d(1, 0, 1), new vec3d(1, 1, 1), new vec3d(0, 1, 1), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
             new triangle3d(new vec3d(1, 0, 1), new vec3d(0, 1, 1), new vec3d(0, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
         ];
     }
-}
-
-class sprite {
-
 }
 
 class mat4x4 {
@@ -434,7 +432,7 @@ class Scene {
 
     public canvas: HTMLCanvasElement;
     private ctx: CanvasRenderingContext2D;
-    private meshCub = new mesh([new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d())]);;
+    public me = new mesh();
     private image: png_sampler;
 
     private vCamera: vec3d;
@@ -471,11 +469,13 @@ class Scene {
         this.canvas = document.getElementById('canvas') as HTMLCanvasElement;
         this.ctx = this.canvas.getContext("2d")!;
 
-        // this.meshCub.setMeshFromFile("../resources/mountains.obj");
+        // this.m.setMeshFromFile("../resources/mountains.obj");
         this.image = new png_sampler ();
 
         // this.spriteTexture1 = new sprite("../jario")
-        this.meshCub.setCubeMesh();
+        this.me.setCubeMesh();
+        // here the first two triangles have already the texture coordinates zeroed
+        console.log("after mesh init", this.me);
 
         this.AspectRatio = this.canvas.height / this.canvas.width;
         this.FovRad = 1 / Math.tan((this.Fov * 0.5) * (Math.PI / 180));
@@ -793,13 +793,12 @@ class Scene {
 
         let proj_mat = mat_make_projection(this.FovRad, this.AspectRatio, this.Znear, this.Zfar);
 
-
-        this.meshCub.tris.forEach((tri: triangle3d) => {
+        this.me.tris.forEach((tri: triangle3d) => {
 
             let triRotated = new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d());
             let triViewed =  new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d());
             
-            console.log("tri", tri);
+            // console.log("tri", tri);
 
             world_mat.vec_matrix_multiply(tri.p[0], triRotated.p[0]);
             world_mat.vec_matrix_multiply(tri.p[1], triRotated.p[1]);
@@ -823,7 +822,8 @@ class Scene {
 
                 let triProjected = new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d());
 
-                console.log("rotated", triRotated);
+                // console.log("tri", tri);
+                // console.log("rotated", triRotated);
                 // convert world space to view space
                 matView.vec_matrix_multiply(triRotated.p[0], triViewed.p[0]);
                 matView.vec_matrix_multiply(triRotated.p[1], triViewed.p[1]);
@@ -1002,9 +1002,15 @@ class Scene {
 async function initAndStart () {
 
     const scene = new Scene();
+    console.log(scene.me);
     await scene.initalize();
     scene.displaySampledTexture();
     scene.start();
 }
 
 initAndStart().catch(console.error);
+
+// let m = new mesh();
+// m.setCubeMesh();
+// // here the first two triangles have already the texture coordinates zeroed
+// console.log("after mesh init", m);
