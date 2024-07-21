@@ -1,4 +1,5 @@
 export class png_sampler {
+
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   public width: number = 0;
@@ -38,10 +39,12 @@ export class png_sampler {
   }
 
   public print_info() {
+
     if (!this.initialized) {
       console.warn("PNG not initialized. Call init_sampler first.");
       return;
     }
+
     console.log("\n-----------PNG info-----------");
     console.log("img width", this.width);
     console.log("img height", this.height);
@@ -74,7 +77,7 @@ export class png_sampler {
 }
 
 export async function sample_rectangle(x: number, y: number, width: number, height: number, imgSrc: string): Promise<HTMLCanvasElement> {
-  
+
   let sampler = new png_sampler();
   await sampler.init_sampler(imgSrc);
 
@@ -99,6 +102,6 @@ export async function sample_rectangle(x: number, y: number, width: number, heig
   console.timeEnd("sampling pixels");
 
   ctx.putImageData(imageData, 0, 0);
-  
+
   return canvas;
 }

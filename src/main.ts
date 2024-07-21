@@ -1,443 +1,15 @@
 // import png from '../node_modules/simplepngjs/dist/index.js'
-import { png_sampler, sample_rectangle } from './png2.js';
-
-class _number {
-    public val = 0;
-}
-
-class vec2d {
-
-    public u: number;
-    public v: number;
-
-    constructor (u: number=0, v: number=0) {
-        this.u = u;
-        this.v = v; 
-    }
-}
-
-class vec3d {
-
-    public v: [number, number, number, number]
-
-    constructor(x: number = 0, y: number = 0, z: number = 0, w: number = 1) {
-        this.v = [x,y,z,w]
-    }
-
-    add_vector (u: vec3d) {
-        return new vec3d(this.v[0]+u.v[0], this.v[1]+u.v[1], this.v[2]+u.v[2]);
-    }
-
-    sub_vector (u: vec3d) {
-        return new vec3d(this.v[0]-u.v[0], this.v[1]-u.v[1], this.v[2]-u.v[2]);
-    }
-
-    normalize () {
-        let l = Math.sqrt(this.v[0]*this.v[0] + this.v[1]*this.v[1] + this.v[2]*this.v[2]);
-        if (l == 0) { l=1; }
-
-        return new vec3d(this.v[0]/l, this.v[1]/l, this.v[2]/l);
-    }
-
-    dot_product(u: vec3d) {
-        return this.v[0]*u.v[0] + this.v[1]*u.v[1] + this.v[2]*u.v[2];
-    }
-
-    cross_product(u: vec3d) {
-        let res = new vec3d();
-
-        res.v[0] = this.v[1] * u.v[2] - this.v[2] * u.v[1];
-        res.v[1] = this.v[2] * u.v[0] - this.v[0] * u.v[2];
-        res.v[2] = this.v[0] * u.v[1] - this.v[1] * u.v[0];
-
-        return res;
-    }
-
-    mult_vector_vector(u: vec3d) {
-        return new vec3d(this.v[0] * u.v[0], this.v[1] * u.v[1], this.v[2] * u.v[2]);
-    }
-
-    mult_vector_scalar(n: number) {
-        return new vec3d(this.v[0] * n, this.v[1] * n, this.v[2] * n);
-    }
-
-    div_vector(n: number) {
-        return new vec3d(this.v[0] / n, this.v[1] / n, this.v[2] / n);
-    }
-}
-
-class triangle3d {
-    public p: [vec3d, vec3d, vec3d];
-    public t: [vec2d, vec2d, vec2d];
-    public color: string;
-
-    constructor(a: vec3d, b: vec3d, c: vec3d, d: vec2d, e: vec2d, f: vec2d, color="rgb(255,255,255)") {
-        this.p = [a, b, c];
-        this.t = [d, e, f];
-        // this.t = [new vec2d(d.u, d.v), new vec2d(e.u, e.v), new vec2d(f.u, f.v)];
-        this.color = color;
-    }
-}
-
-class mesh {
-
-    public tris: triangle3d[];
-
-    constructor() {
-        this.tris = [];
-    }
-
-    async setMeshFromFile(file: string) {
-        try {
-            const response = await fetch(file);
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            const data = await response.text();
-            // console.log(data);
-
-            const lines = data.split('\n');
-            const vertices: vec3d[] = [];
-            this.tris = [];
-
-            for (let line of lines) {
-                if (line.startsWith('v ')) {
-                    const coords = line.split(' ');
-                    const x = -parseFloat(coords[1]);
-                    const y = -parseFloat(coords[2]);
-                    const z = parseFloat(coords[3]);
-                    vertices.push(new vec3d(x, y, z));
-
-                } else if (line.startsWith('f ')) {
-                    
-                    const polys = line.split(' ');
-                    const v1 = vertices[parseInt(polys[1].split('/')[0]) - 1];
-                    const v2 = vertices[parseInt(polys[2].split('/')[0]) - 1];
-                    const v3 = vertices[parseInt(polys[3].split('/')[0]) - 1];
-
-                    this.tris.push(new triangle3d(v1, v2, v3, new vec2d(), new vec2d(), new vec2d()));
-                }
-            }
-
-            // console.log(this.tris);
-
-            // You can parse the .obj file data here and set it to this.tris
-        } catch (error) {
-            console.error('Failed to fetch file:', error);
-        }
-    }
-    
-    setCubeMesh() {
-
-        this.tris = [
-            new triangle3d(new vec3d(0, 0, 0), new vec3d(0, 1, 0), new vec3d(1, 1, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-            new triangle3d(new vec3d(0, 0, 0), new vec3d(1, 1, 0), new vec3d(1, 0, 0), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
-
-            new triangle3d(new vec3d(1, 0, 0), new vec3d(1, 1, 0), new vec3d(1, 1, 1), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-            new triangle3d(new vec3d(1, 0, 0), new vec3d(1, 1, 1), new vec3d(1, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
-            
-            new triangle3d(new vec3d(0, 1, 0), new vec3d(0, 1, 1), new vec3d(1, 1, 1), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-            new triangle3d(new vec3d(0, 1, 0), new vec3d(1, 1, 1), new vec3d(1, 1, 0), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
-            
-            new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 0, 0), new vec3d(1, 0, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-            new triangle3d(new vec3d(0, 0, 1), new vec3d(1, 0, 0), new vec3d(1, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
-            
-            new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 1, 1), new vec3d(0, 1, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-            new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 1, 0), new vec3d(0, 0, 0), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
-            
-            new triangle3d(new vec3d(1, 0, 1), new vec3d(1, 1, 1), new vec3d(0, 1, 1), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-            new triangle3d(new vec3d(1, 0, 1), new vec3d(0, 1, 1), new vec3d(0, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
-        ];
-    }
-}
-
-class mat4x4 {
-    public mat: number[][];
-
-    constructor() {
-        this.mat = [];
-        for (let i = 0; i < 4; i++) {
-            this.mat[i] = [];
-            for (let j = 0; j < 4; j++) {
-                this.mat[i][j] = 0;
-            }
-        }
-    }
-
-    vec_matrix_multiply(x: vec3d , dest: vec3d) {
-
-        let s1 = this.mat[0][0] * x.v[0] + this.mat[1][0] * x.v[1] + this.mat[2][0] * x.v[2] + this.mat[3][0] * x.v[3];
-        let s2 = this.mat[0][1] * x.v[0] + this.mat[1][1] * x.v[1] + this.mat[2][1] * x.v[2] + this.mat[3][1] * x.v[3];
-        let s3 = this.mat[0][2] * x.v[0] + this.mat[1][2] * x.v[1] + this.mat[2][2] * x.v[2] + this.mat[3][2] * x.v[3];
-        let s4 = this.mat[0][3] * x.v[0] + this.mat[1][3] * x.v[1] + this.mat[2][3] * x.v[2] + this.mat[3][3] * x.v[3];
-
-        dest.v[0] = s1; dest.v[1] = s2; dest.v[2] = s3;  dest.v[3] = s4;
-    }
-
-    mat_multiply(other: mat4x4) {
-
-        let result = new mat4x4();
-
-        for (let i=0; i < 4; i++) {
-            for (let j=0; j < 4; j++) {
-                let sum = 0;
-                for (let k=0; k < 4; k++) {
-                    // ik kj
-                    sum += this.mat[i][k] * other.mat[k][j];
-                }
-                result.mat[i][j] = sum;
-            }
-        }
-        
-        return result;
-    }
-}
-
-function mat_identity() {
-
-    let ident = new mat4x4();
-    ident.mat[0][0] = 1;
-    ident.mat[1][1] = 1;
-    ident.mat[2][2] = 1;
-    ident.mat[3][3] = 1;
-
-    return ident;
-}
-
-function mat_make_projection(theta: number, a: number, z_near: number, z_far: number) {
-    let proj_mat = new mat4x4();
-    proj_mat.mat[0][0] = a * theta;
-    proj_mat.mat[1][1] = theta;
-    proj_mat.mat[2][2] = z_far / (z_far - z_near);
-    proj_mat.mat[3][2] = (-z_far * z_near) / (z_far - z_near);
-    proj_mat.mat[2][3] = 1;
-    proj_mat.mat[3][3] = 0;
-
-    return proj_mat;
-}
-
-function mat_make_rotX (theta: number) {
-    let rot_mat = new mat4x4();
-    rot_mat.mat = [
-        [1, 0, 0, 0],
-        [0, Math.cos(theta), Math.sin(theta), 0],
-        [0, -Math.sin(theta), Math.cos(theta), 0],
-        [0, 0, 0, 1],
-    ];
-
-    return rot_mat;
-}
-
-function mat_make_rotY (theta: number) {
-    let rot_mat = new mat4x4();
-    rot_mat.mat = [
-        [Math.cos(theta), 0, -Math.sin(theta), 0],
-        [0, 1, 0, 0],
-        [Math.sin(theta), 0, Math.cos(theta), 0],
-        [0, 0, 0, 1],
-    ];
-
-    return rot_mat;
-}
-
-function mat_make_rotZ (theta: number) {
-    let rot_mat = new mat4x4();
-    rot_mat.mat = [
-        [Math.cos(theta), Math.sin(theta), 0, 0],
-        [-Math.sin(theta), Math.cos(theta), 0, 0],
-        [0, 0, 1, 0],
-        [0, 0, 0, 1],
-    ];
-
-    return rot_mat;
-}
-
-function mat_make_trans (x: number, y: number, z: number) {
-    let trans_matrix = new mat4x4();
-    trans_matrix.mat = [
-        [1, 0, 0, 0],
-        [0, 1, 0, 0],
-        [0, 0, 1, 0],
-        [x, y, z, 1]
-    ];
-    return trans_matrix;
-}
-
-// returns either the intersection vector or nothing
-function vector_intersect_plane (plane_point: vec3d, plane_normal: vec3d, line_start: vec3d, line_end: vec3d, t: _number) {
-    plane_normal = plane_normal.normalize();
-    let plane_d =  -plane_normal.dot_product(plane_point);
-    let ad = line_start.dot_product(plane_normal);
-    let bd = line_end.dot_product(plane_normal);
-    t.val = (-plane_d - ad) / (bd - ad);
-    let line_start_to_end = line_end.sub_vector(line_start);
-    let line_to_intersect = line_start_to_end.mult_vector_scalar(t.val);
-    return line_start.add_vector(line_to_intersect);
-}
-
-function distance_point_to_plane (plane_normal: vec3d, plane_point: vec3d, point: vec3d) {
-
-    return (plane_normal.v[0]*point.v[0]+plane_normal.v[1]*point.v[1]+plane_normal.v[2]*point.v[2] - plane_normal.dot_product(plane_point));
-}
-
-// either output via tri1 or tri2, maybe both
-function triangle_clip_against_plane (plane_point: vec3d, plane_normal: vec3d, in_tri: triangle3d, out_tri: triangle3d, out_tri2: triangle3d) {
-   
-    // make sure the plane normal is normalized
-    plane_normal = plane_normal.normalize();
-
-    let insidePointCount = 0;
-    let outsidePointCount = 0;
-    let insideTexCount = 0;
-    let outsideTexCount = 0;
-
-    let inside_points: vec3d[] = [new vec3d(), new vec3d(), new vec3d()];
-    let outside_points: vec3d[] = [new vec3d(), new vec3d(), new vec3d()];
-    let inside_tex: vec2d[] = [new vec2d(), new vec2d(), new vec2d()];
-    let outside_tex: vec2d[] = [new vec2d(), new vec2d(), new vec2d()];
-
-    // get distance from each vertex of triangle to plane
-    let d0 = distance_point_to_plane(plane_normal, plane_point, in_tri.p[0]);
-    let d1 = distance_point_to_plane(plane_normal, plane_point, in_tri.p[1]);
-    let d2 = distance_point_to_plane(plane_normal, plane_point, in_tri.p[2]);
-
-    if (d0 >= 0) {
-        inside_points[insidePointCount++] = in_tri.p[0]; inside_tex[insideTexCount++] = in_tri.t[0];
-    } else {
-        outside_points[outsidePointCount++] = in_tri.p[0]; outside_tex[outsideTexCount++] = in_tri.t[0];
-    }
-
-    if (d1 >= 0) {
-        inside_points[insidePointCount++] = in_tri.p[1];  inside_tex[insideTexCount++] = in_tri.t[1];
-    } else {
-        outside_points[outsidePointCount++] = in_tri.p[1]; outside_tex[outsideTexCount++] = in_tri.t[1];
-    }
-
-    if (d2 >= 0) {
-        inside_points[insidePointCount++] = in_tri.p[2];  inside_tex[insideTexCount++] = in_tri.t[2];
-    } else {
-        outside_points[outsidePointCount++] = in_tri.p[2]; outside_tex[outsideTexCount++] = in_tri.t[2];
-    }
-
-    // outside of plane
-    if (insidePointCount == 0) {
-        return 0;
-    }
-
-    if (insidePointCount == 3) {
-        // no changes were made
-        out_tri.color = in_tri.color;
-        out_tri.p = [...in_tri.p];
-        out_tri.t = [...in_tri.t];
-        return 1;
-    }
-
-    if (insidePointCount == 1 && outsidePointCount == 2) {
-        
-        out_tri.color = in_tri.color;
-        // out_tri.color = "rgb( 80, 255, 80)";
-
-        out_tri.p[0] = inside_points[0];
-        out_tri.t[0] = inside_tex[0];
-
-        let t = new _number();
-        out_tri.p[1] = vector_intersect_plane(plane_point, plane_normal, inside_points[0], outside_points[0], t);
-        out_tri.t[1].u = t.val * (outside_tex[0].u - inside_tex[0].u) + inside_tex[0].u;
-        out_tri.t[1].v = t.val * (outside_tex[0].v - inside_tex[0].v) + inside_tex[0].v;
-
-        out_tri.p[2] = vector_intersect_plane(plane_point, plane_normal, inside_points[0], outside_points[1], t);
-        out_tri.t[2].u = t.val * (outside_tex[1].u - inside_tex[0].u) + inside_tex[0].u;
-        out_tri.t[2].v = t.val * (outside_tex[1].v - inside_tex[0].v) + inside_tex[0].v;
-        return 1;
-    }
-
-    if (insidePointCount == 2 && outsidePointCount == 1) {
-        
-        // out_tri.color = "rgb( 255, 80, 80)";
-        // out_tri2.color =  "rgb( 80, 80, 255)";
-
-        out_tri.color = in_tri.color;
-        out_tri2.color = in_tri.color;
-
-        out_tri.p[0] = inside_points[0];
-        out_tri.p[1] = inside_points[1];
-
-        out_tri.t[0] = inside_tex[0];
-        out_tri.t[1] = inside_tex[1];
-
-        let t = new _number();
-        out_tri.p[2] = vector_intersect_plane(plane_point, plane_normal, inside_points[0], outside_points[0], t);
-        out_tri.t[2].u = t.val * (outside_tex[0].u - inside_tex[0].u) + inside_tex[0].u;
-        out_tri.t[2].v = t.val * (outside_tex[0].v - inside_tex[0].v) + inside_tex[0].v;
-
-        out_tri2.p[0] = inside_points[1];
-        out_tri2.t[0] = inside_tex[1];
-        
-        out_tri2.p[1] = out_tri.p[2];
-        out_tri2.t[1] = out_tri.t[2];
-        
-        out_tri2.p[2] = vector_intersect_plane(plane_point, plane_normal, inside_points[1], outside_points[0], t);
-        out_tri2.t[2].u = t.val * (outside_tex[0].u - inside_tex[1].u) + inside_tex[1].u;
-        out_tri2.t[2].v = t.val * (outside_tex[0].v - inside_tex[1].v) + inside_tex[1].v;
-
-        return 2;
-    }
-
-    return 0;
-}
-
-// given a camera vector and its forward direction, we want to be able to point 
-// its forward direction somewhere else, the camera vector is the camera's location
-
-// pos -  where it should be in 3d space
-// target - curr forward vector
-// up - vector thats orthogonal to forward vector and points up
-function mat_point_at (pos: vec3d, target: vec3d, up: vec3d) {
-
-    // calculate a new forward vector
-    let newForward = target.sub_vector(pos);
-    newForward = newForward.normalize();
-
-    // calculate new up vector, in case we rotate the y
-    let a = newForward.mult_vector_scalar(up.dot_product(newForward));
-    let newUp = up.sub_vector(a);
-    newUp = newUp.normalize();
-
-    // calculate a new right vector
-    let newRight = newUp.cross_product(newForward);
-
-    let matrix = new mat4x4();
-
-    matrix.mat[0][0] = newRight.v[0];   matrix.mat[0][1] = newRight.v[1];   matrix.mat[0][2] = newRight.v[2];   matrix.mat[0][3] = 0; 
-    matrix.mat[1][0] = newUp.v[0];      matrix.mat[1][1] = newUp.v[1];      matrix.mat[1][2] = newUp.v[2];      matrix.mat[1][3] = 0; 
-    matrix.mat[2][0] = newForward.v[0]; matrix.mat[2][1] = newForward.v[1]; matrix.mat[2][2] = newForward.v[2]; matrix.mat[2][3] = 0; 
-    matrix.mat[3][0] = pos.v[0];        matrix.mat[3][1] = pos.v[1];        matrix.mat[3][2] = pos.v[2];        matrix.mat[3][3] = 1; 
-    return matrix;
-}
-
-// works only for orthogonal matrices, i.e. rotation, translation matrices
-function quick_inverse (mat: mat4x4) {
-    let matrix = new mat4x4();
-    matrix.mat[0][0] = mat.mat[0][0]; matrix.mat[0][1] = mat.mat[1][0]; matrix.mat[0][2] = mat.mat[2][0]; matrix.mat[0][3] = 0.0;
-    matrix.mat[1][0] = mat.mat[0][1]; matrix.mat[1][1] = mat.mat[1][1]; matrix.mat[1][2] = mat.mat[2][1]; matrix.mat[1][3] = 0.0;
-    matrix.mat[2][0] = mat.mat[0][2]; matrix.mat[2][1] = mat.mat[1][2]; matrix.mat[2][2] = mat.mat[2][2]; matrix.mat[2][3] = 0.0;
-    matrix.mat[3][0] = -(mat.mat[3][0] * matrix.mat[0][0] + mat.mat[3][1] * matrix.mat[1][0] + mat.mat[3][2] * matrix.mat[2][0]);
-    matrix.mat[3][1] = -(mat.mat[3][0] * matrix.mat[0][1] + mat.mat[3][1] * matrix.mat[1][1] + mat.mat[3][2] * matrix.mat[2][1]);
-    matrix.mat[3][2] = -(mat.mat[3][0] * matrix.mat[0][2] + mat.mat[3][1] * matrix.mat[1][2] + mat.mat[3][2] * matrix.mat[2][2]);
-    matrix.mat[3][3] = 1.0;
-    return matrix;
-}
+import { draw_textured_triangle } from './shapes/drawing.js';
+import { vec3d, vec2d, mat4x4, _number, mesh, triangle3d} from './shapes/geometry.js';
+import { Camera } from './utils/camera.js';
+import { png_sampler, sample_rectangle } from './utils/png.js';
 
 class Scene {
 
     public canvas: HTMLCanvasElement;
     private ctx: CanvasRenderingContext2D;
-    public me = new mesh();
+    public me: mesh;
     private image: png_sampler;
-
-    private vCamera: vec3d;
-    private vLookDirection: vec3d = new vec3d();
-    private fYaw: number;
 
     private Znear = 0.01;
     private Zfar = 100;
@@ -459,12 +31,11 @@ class Scene {
 
     private moveSpeed: number = 10;
 
-    // key is keyboard button name, true if held down
-    private keys: { [key: string]: boolean } = {}
+    private camera: Camera
 
     // private spriteTexture1: sprite = new sprite();
 
-    constructor() {
+    constructor(m: mesh) {
 
         this.canvas = document.getElementById('canvas') as HTMLCanvasElement;
         this.ctx = this.canvas.getContext("2d")!;
@@ -473,9 +44,10 @@ class Scene {
         this.image = new png_sampler ();
 
         // this.spriteTexture1 = new sprite("../jario")
-        this.me.setCubeMesh();
-        // here the first two triangles have already the texture coordinates zeroed
-        console.log("after mesh init", this.me);
+        this.me = m;
+        console.log(this.me);
+
+        this.camera = new Camera(this.moveSpeed);
 
         this.AspectRatio = this.canvas.height / this.canvas.width;
         this.FovRad = 1 / Math.tan((this.Fov * 0.5) * (Math.PI / 180));
@@ -503,251 +75,26 @@ class Scene {
 
         // handles all keys
         document.addEventListener('keydown', (event) => {
-            this.keys[event.key.toLowerCase()] = true;
+            this.camera.keys[event.key.toLowerCase()] = true;
         })
 
         document.addEventListener('keyup', (event) => {
-            this.keys[event.key.toLowerCase()] = false;
+            this.camera.keys[event.key.toLowerCase()] = false;
         })
     
 
         this.lastTime = new Date().getTime();
         this.fTheta = 0;
-
-        this.vCamera = new vec3d();
-        this.vLookDirection = new vec3d();
-        this.fYaw = 0;
     }
 
     async initalize() {
-
         await this.image.init_sampler("../files/image.png");
-    }
-
-    draw2d_triangle(a1: number, a2: number, b1: number, b2: number, c1: number, c2: number) {
-        this.ctx.beginPath();
-        this.ctx.moveTo(a1, a2);
-        this.ctx.lineTo(b1, b2);
-        this.ctx.lineTo(c1, c2);
-        this.ctx.closePath();
-        this.ctx.stroke();
-    }
-
-    draw2d_vector(c1: number, c2: number, x: number, y: number) {
-        this.ctx.beginPath();
-        this.ctx.moveTo(c1, c2);
-        this.ctx.lineTo(x, y);
-        this.ctx.stroke();
-    }
-
-    fill2d_triangle(a1: number, a2: number, b1: number, b2: number, c1: number, c2: number, color: string) {
-        // we want to color in a grey scale, color is from 0 to 255
-        this.ctx.fillStyle = color;
-        this.ctx.beginPath();
-        this.ctx.moveTo(a1, a2);
-        this.ctx.lineTo(b1, b2);
-        this.ctx.lineTo(c1, c2);
-        this.ctx.closePath();
-        this.ctx.fill();
-    }
-
-    textured_triangle(x1: number, y1: number, u1: number, v1: number,
-        x2: number, y2: number, u2: number, v2: number,
-        x3: number, y3: number, u3: number, v3: number,
-        tex: png_sampler, ctx: CanvasRenderingContext2D) {
-
-        // Sort the vertices by y-coordinate (y1 <= y2 <= y3)
-        if (y2 < y1) {
-        [x1, x2, y1, y2, u1, u2, v1, v2] = [x2, x1, y2, y1, u2, u1, v2, v1];
-        }
-        if (y3 < y1) {
-        [x1, x3, y1, y3, u1, u3, v1, v3] = [x3, x1, y3, y1, u3, u1, v3, v1];
-        }
-        if (y3 < y2) {
-        [x2, x3, y2, y3, u2, u3, v2, v3] = [x3, x2, y3, y2, u3, u2, v3, v2];
-        }
-
-        // Calculate slopes
-        let dy1 = y2 - y1;
-        let dx1 = x2 - x1;
-        let du1 = u2 - u1;
-        let dv1 = v2 - v1;
-
-        let dy2 = y3 - y1;
-        let dx2 = x3 - x1;
-        let du2 = u3 - u1;
-        let dv2 = v3 - v1;
-
-        let tex_u, tex_v;
-
-        // Calculate step sizes
-        let dax_step = 0, dbx_step = 0,
-        du1_step = 0, dv1_step = 0,
-        du2_step = 0, dv2_step = 0;
-
-        if (dy1) dax_step = dx1 / Math.abs(dy1);
-        if (dy2) dbx_step = dx2 / Math.abs(dy2);
-
-        if (dy1) du1_step = du1 / Math.abs(dy1);
-        if (dy1) dv1_step = dv1 / Math.abs(dy1);
-
-        if (dy2) du2_step = du2 / Math.abs(dy2);
-        if (dy2) dv2_step = dv2 / Math.abs(dy2);
-
-        // First half of the triangle
-        if (dy1) {
-
-            for (let i = Math.floor(y1); i <= Math.floor(y2); i++) {
-
-                let ax = x1 + (i - y1) * dax_step;
-                let bx = x1 + (i - y1) * dbx_step;
-
-                let tex_su = u1 + (i - y1) * du1_step;
-                let tex_sv = v1 + (i - y1) * dv1_step;
-                let tex_eu = u1 + (i - y1) * du2_step;
-                let tex_ev = v1 + (i - y1) * dv2_step;
-
-                if (ax > bx) {
-                    [ax, bx, tex_su, tex_eu, tex_sv, tex_ev] = [bx, ax, tex_eu, tex_su, tex_ev, tex_sv];
-                }
-
-                tex_u = tex_su;
-                tex_v = tex_sv;
-
-                let tstep = 1 / (bx - ax);
-                let t = 0;
-
-                for (let j = Math.floor(ax); j < Math.floor(bx); j++) {
-                    tex_u = (1 - t) * tex_su + t * tex_eu;
-                    tex_v = (1 - t) * tex_sv + t * tex_ev;
-                    
-                    // Clamp texture coordinates to [0, 1] range
-                    let u = Math.max(0, Math.min(1, tex_u));
-                    let v = Math.max(0, Math.min(1, tex_v));
-                    
-                    // Scale texture coordinates to image size
-                    let px = Math.floor(u * (tex.width - 1));
-                    let py = Math.floor(v * (tex.height - 1));
-                    
-                    let pixel = tex.sample_pixel(px, py);
-                    ctx.fillStyle = `rgba(${pixel[0]},${pixel[1]},${pixel[2]},${pixel[3]})`;
-                    ctx.fillRect(j, i, 1, 1);
-                    
-                    t += tstep;
-                }
-            }
-        }
-
-        // Second half of the triangle
-        dy1 = y3 - y2;
-        dx1 = x3 - x2;
-        du1 = u3 - u2;
-        dv1 = v3 - v2;
-
-        if (dy1) dax_step = dx1 / Math.abs(dy1);
-        if (dy2) dbx_step = dx2 / Math.abs(dy2);
-
-        du1_step = 0;
-        dv1_step = 0;
-        if (dy1) du1_step = du1 / Math.abs(dy1);
-        if (dy1) dv1_step = dv1 / Math.abs(dy1);
-
-        if (dy1) {
-                
-            for (let i = Math.floor(y2); i <= Math.floor(y3); i++) {
-
-                let ax = x2 + (i - y2) * dax_step;
-                let bx = x1 + (i - y1) * dbx_step;
-
-                let tex_su = u2 + (i - y2) * du1_step;
-                let tex_sv = v2 + (i - y2) * dv1_step;
-                let tex_eu = u1 + (i - y1) * du2_step;
-                let tex_ev = v1 + (i - y1) * dv2_step;
-
-                if (ax > bx) {
-                    [ax, bx, tex_su, tex_eu, tex_sv, tex_ev] = [bx, ax, tex_eu, tex_su, tex_ev, tex_sv];
-                }
-
-                tex_u = tex_su;
-                tex_v = tex_sv;
-
-                let tstep = 1 / (bx - ax);
-                let t = 0;
-
-                for (let j = Math.floor(ax); j < Math.floor(bx); j++) {
-                    tex_u = (1 - t) * tex_su + t * tex_eu;
-                    tex_v = (1 - t) * tex_sv + t * tex_ev;
-                    
-                    // Clamp texture coordinates to [0, 1] range
-                    let u = Math.max(0, Math.min(1, tex_u));
-                    let v = Math.max(0, Math.min(1, tex_v));
-                    
-                    // Scale texture coordinates to image size
-                    let px = Math.floor(u * (tex.width - 1));
-                    let py = Math.floor(v * (tex.height - 1));
-                    
-                    let pixel = tex.sample_pixel(px, py);
-                    ctx.fillStyle = `rgba(${pixel[0]},${pixel[1]},${pixel[2]},${pixel[3]})`;
-                    ctx.fillRect(j, i, 1, 1);
-                    
-                    t += tstep;
-                }
-            }
-        }
-    }
-
-    move_camera_up(n: number) {
-        this.vCamera.v[1] -= n;
-    }
-
-    move_camera_down(n: number) {
-        this.vCamera.v[1] += n;
-    }
-
-    move_camera_right(n: number) {
-        this.vCamera.v[0] += n;
-    }
-
-    move_camera_left(n: number) {
-        this.vCamera.v[0] -= n;
     }
 
 
     render() {
 
-        if (this.keys['arrowup']) {
-            this.move_camera_up(this.moveSpeed * this.elapsed_time);
-        }
-        if (this.keys['arrowdown']) {
-            this.move_camera_down(this.moveSpeed * this.elapsed_time);
-        }
-        if (this.keys['arrowleft']) {
-            // this.move_camera_left(1);
-            let vForwarddd = this.vLookDirection.mult_vector_scalar( this.moveSpeed * this.elapsed_time);
-            let a = vForwarddd.cross_product(new vec3d(0,1,0)); 
-            this.vCamera = this.vCamera.add_vector(a);
-        }
-        if (this.keys['arrowright']) {
-            let vForwardddd = this.vLookDirection.mult_vector_scalar( this.moveSpeed * this.elapsed_time);
-            let b = new vec3d(0,1,0).cross_product(vForwardddd); 
-            this.vCamera = this.vCamera.add_vector(b);
-        }
-        if (this.keys['w']) {
-            // we want to travel along the lookDir vector
-            // thus we define a velocity vector as such
-            let vForward = this.vLookDirection.mult_vector_scalar( this.moveSpeed * this.elapsed_time);
-            this.vCamera = this.vCamera.add_vector(vForward);
-        }
-        if (this.keys['a']) {
-            this.fYaw -= this.moveSpeed / 10 * this.elapsed_time;
-        }
-        if (this.keys['s']) {
-            let vForwardd = this.vLookDirection.mult_vector_scalar( this.moveSpeed * this.elapsed_time);
-            this.vCamera = this.vCamera.sub_vector(vForwardd);
-        }
-        if (this.keys['d']) {
-                this.fYaw += this.moveSpeed / 10 * this.elapsed_time;
-        }
+        this.me.roundAllTex();
 
 
         this.ctx.fillStyle = "rgb(104, 109, 118)";
@@ -764,34 +111,19 @@ class Scene {
 
         this.lastTime = currentTime;
         // this.fTheta += this.elapsed_time;
-
-
-        // this.vLookDirection =  new vec3d(0,0,1);
-        let vUp = new vec3d(0,1,0);
-        // unit vector fixed in the z axis
-        let vTarget = new vec3d(0,0,1);
-        // rotate it along the y axis, simulating turning left or right
-        let matCameraRotation = mat_make_rotY(this.fYaw);
-        // we get new forward facing vector
-        matCameraRotation.vec_matrix_multiply(vTarget, this.vLookDirection);
-        // add it to camera to traverse in looking direction
-        vTarget = this.vCamera.add_vector(this.vLookDirection);
-
-        let matCamera = mat_point_at(this.vCamera, vTarget, vUp);
-
-        // view matrix for camera
-        let matView = quick_inverse(matCamera);
-
+        
+        this.camera.updateMovement(this.elapsed_time);
+        let matView = this.camera.getViewMatrix();
 
 
         let trisToRaster: triangle3d[] = [];
 
-        let world_mat = mat_make_rotZ(this.fTheta);
-        world_mat = world_mat.mat_multiply(mat_make_rotX(this.fTheta*0.5));
-        world_mat = world_mat.mat_multiply(mat_make_rotY(this.fTheta));
-        world_mat = world_mat.mat_multiply(mat_make_trans(0, 0, this.distance));
+        let world_mat = mat4x4.mat_make_rotZ(this.fTheta);
+        world_mat = world_mat.mat_multiply(mat4x4.mat_make_rotX(this.fTheta*0.5));
+        world_mat = world_mat.mat_multiply(mat4x4.mat_make_rotY(this.fTheta));
+        world_mat = world_mat.mat_multiply(mat4x4.mat_make_trans(0, 0, this.distance));
 
-        let proj_mat = mat_make_projection(this.FovRad, this.AspectRatio, this.Znear, this.Zfar);
+        let proj_mat = mat4x4.mat_make_projection(this.FovRad, this.AspectRatio, this.Znear, this.Zfar);
 
         this.me.tris.forEach((tri: triangle3d) => {
 
@@ -815,7 +147,7 @@ class Scene {
             let normal = line1.cross_product(line2);
             normal = normal.normalize();
 
-            let camRay = triRotated.p[0].sub_vector(this.vCamera);
+            let camRay = triRotated.p[0].sub_vector(this.camera.v);
             
 
             if (normal.dot_product(camRay) < 0) {
@@ -841,7 +173,7 @@ class Scene {
 
                 // let t = 0;
                 // clip against z_near plane, normal is along the z axis
-                clipped_triangle_count = triangle_clip_against_plane(new vec3d(0,0,0.1), new vec3d(0,0,1), triViewed, clipped[0], clipped[1]);
+                clipped_triangle_count = triangle3d.triangle_clip_against_plane(new vec3d(0,0,0.1), new vec3d(0,0,1), triViewed, clipped[0], clipped[1]);
                 // console.log(clipped_triangle_count);
 
                 for (let n=0; n < clipped_triangle_count; n++) {
@@ -927,16 +259,16 @@ class Scene {
                     switch(p) {
                         
                         case 0:
-                            trisToAdd = triangle_clip_against_plane(new vec3d(0,0,0), new vec3d(0,1,0), test, clipped[0], clipped[1]);
+                            trisToAdd = triangle3d.triangle_clip_against_plane(new vec3d(0,0,0), new vec3d(0,1,0), test, clipped[0], clipped[1]);
                             break;
                         case 1:
-                            trisToAdd = triangle_clip_against_plane(new vec3d(0,this.canvas.height -1,0), new vec3d(0,-1,0), test, clipped[0], clipped[1]);
+                            trisToAdd = triangle3d.triangle_clip_against_plane(new vec3d(0,this.canvas.height -1,0), new vec3d(0,-1,0), test, clipped[0], clipped[1]);
                             break;
                         case 2:
-                            trisToAdd = triangle_clip_against_plane(new vec3d(1,0,0), new vec3d(1,0,0), test, clipped[0], clipped[1]);
+                            trisToAdd = triangle3d.triangle_clip_against_plane(new vec3d(1,0,0), new vec3d(1,0,0), test, clipped[0], clipped[1]);
                             break;
                         case 3:
-                            trisToAdd = triangle_clip_against_plane(new vec3d(this.canvas.width-1,0,0), new vec3d(-1,0,0), test, clipped[0], clipped[1]);
+                            trisToAdd = triangle3d.triangle_clip_against_plane(new vec3d(this.canvas.width-1,0,0), new vec3d(-1,0,0), test, clipped[0], clipped[1]);
                             break;
                     }
 
@@ -956,7 +288,7 @@ class Scene {
             listTriangles.forEach((tri: triangle3d) => {
                 
                 // rasterizing triangles
-                this.textured_triangle(tri.p[0].v[0], tri.p[0].v[1], tri.t[0].u, tri.t[0].v, 
+                draw_textured_triangle(tri.p[0].v[0], tri.p[0].v[1], tri.t[0].u, tri.t[0].v, 
                                        tri.p[1].v[0], tri.p[1].v[1], tri.t[1].u, tri.t[1].v, 
                                        tri.p[2].v[0], tri.p[2].v[1], tri.t[2].u, tri.t[2].v, this.image, this.ctx);
 
@@ -964,13 +296,6 @@ class Scene {
                 // this.fill2d_triangle(tri.p[0].v[0],tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1], tri.color);
             })
         });
-
-        // console.log(this.Znear);
-        // trisToRaster.forEach((tri: triangle3d) => {
-        //     // rasterizing triangles
-        //     this.draw2d_triangle(tri.p[0].v[0],tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1]);
-        //     this.fill2d_triangle(tri.p[0].v[0],tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1], tri.color);
-        // });
     }
 
     start () {
@@ -980,6 +305,7 @@ class Scene {
                 this.start();
             }
             this.render();
+            console.log(m.stringify());
         }, this.interval);
     }
 
@@ -999,16 +325,18 @@ class Scene {
     }
 }
 
-async function initAndStart () {
-
-    const scene = new Scene();
-    console.log(scene.me);
+async function initAndStart (scene: Scene) {
+    
     await scene.initalize();
     scene.displaySampledTexture();
     scene.start();
 }
 
-initAndStart().catch(console.error);
+let m = new mesh();
+m.setCubeMesh();
+// console.log(m.stringify());
+const scene = new Scene(m);
+initAndStart(scene).catch(console.error);
 
 // let m = new mesh();
 // m.setCubeMesh();
