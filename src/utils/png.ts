@@ -54,7 +54,11 @@ export class png_sampler {
     console.log("------------------------------\n");
   }
 
-  public sample_pixel(x: number, y: number): [number, number, number, number] {
+  public sample_pixel(x: number, y: number, off: number, size: number): [number, number, number, number] {
+
+    x = off + Math.floor(x*size);
+    y = off + Math.floor(y*size);
+
     if (!this.initialized || !this.pixels) {
       throw new Error('PNG not initialized. Call init_sampler first');
     }
@@ -94,7 +98,7 @@ export async function sample_rectangle(x: number, y: number, width: number, heig
   console.time("sampling pixels");
   for (let j = 0; j < height; j++) {
     for (let i = 0; i < width; i++) {
-      const pixel = sampler.sample_pixel(x + i, y + j);
+      const pixel = sampler.sample_pixel(x + i, y + j, 0, 1);
       const offset = (j * width + i) * 4;
       imageData.data.set(pixel, offset);
     }

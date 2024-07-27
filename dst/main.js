@@ -27,13 +27,14 @@ class Scene {
         this.distance = 10;
         this.elapsed_time = 0;
         this.moveSpeed = 10;
+        this.f = 1;
         this.canvas = document.getElementById('canvas');
         this.ctx = this.canvas.getContext("2d");
-        // this.m.setMeshFromFile("../resources/mountains.obj");
+        this.me = new mesh();
+        // this.me.setMeshFromFile("../resources/mountains.obj");
         this.image = new png_sampler();
         // this.spriteTexture1 = new sprite("../jario")
         this.me = m;
-        console.log(this.me);
         this.camera = new Camera(this.moveSpeed);
         this.AspectRatio = this.canvas.height / this.canvas.width;
         this.FovRad = 1 / Math.tan((this.Fov * 0.5) * (Math.PI / 180));
@@ -67,7 +68,7 @@ class Scene {
     }
     initalize() {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.image.init_sampler("../files/image.png");
+            yield this.image.init_sampler("../files/minecraft_0.png");
         });
     }
     render() {
@@ -83,8 +84,8 @@ class Scene {
         fpsElement.innerText = `FPS: ${this.fps.toFixed(2)}`;
         this.lastTime = currentTime;
         // this.fTheta += this.elapsed_time;
-        this.camera.updateMovement(this.elapsed_time);
         let matView = this.camera.getViewMatrix();
+        this.camera.updateMovement(this.elapsed_time);
         let trisToRaster = [];
         let world_mat = mat4x4.mat_make_rotZ(this.fTheta);
         world_mat = world_mat.mat_multiply(mat4x4.mat_make_rotX(this.fTheta * 0.5));
@@ -110,6 +111,12 @@ class Scene {
             let camRay = triRotated.p[0].sub_vector(this.camera.v);
             if (normal.dot_product(camRay) < 0) {
                 let triProjected = new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d());
+                // light shines on player, if normal is towards player it should be lighter
+                let vLight = new vec3d(0, 0, -1);
+                // normalize light source
+                vLight = vLight.normalize();
+                let color = normal.dot_product(vLight);
+                triRotated.color = "rgb( " + (color + 1) * (255 / 2) + " " + (color + 1) * (255 / 2) + " " + (color + 1) * (255 / 2) + ")";
                 // console.log("tri", tri);
                 // console.log("rotated", triRotated);
                 // convert world space to view space
@@ -121,6 +128,7 @@ class Scene {
                 triViewed.t[0] = triRotated.t[0];
                 triViewed.t[1] = triRotated.t[1];
                 triViewed.t[2] = triRotated.t[2];
+                // console.log(JSON.stringify(triViewed.t, null, 2));
                 // console.log("viewed", triViewed);
                 let clipped_triangle_count = 0;
                 let clipped = [new triangle3d(new vec3d(), new vec3d(), new vec3d(), new vec2d(), new vec2d(), new vec2d()),
@@ -130,29 +138,26 @@ class Scene {
                 clipped_triangle_count = triangle3d.triangle_clip_against_plane(new vec3d(0, 0, 0.1), new vec3d(0, 0, 1), triViewed, clipped[0], clipped[1]);
                 // console.log(clipped_triangle_count);
                 for (let n = 0; n < clipped_triangle_count; n++) {
-                    // light shines on player, if normal is towards player it should be lighter
-                    let vLight = new vec3d(0, 0, -1);
-                    // normalize light source
-                    vLight = vLight.normalize();
-                    let color = normal.dot_product(vLight);
-                    triProjected.color = "rgb( " + (color + 1) * (255 / 2) + " " + (color + 1) * (255 / 2) + " " + (color + 1) * (255 / 2) + ")";
                     // triProjected.color = clipped[n].color;
                     // project triangle from 3D to 2D
                     proj_mat.vec_matrix_multiply(clipped[n].p[0], triProjected.p[0]);
                     proj_mat.vec_matrix_multiply(clipped[n].p[1], triProjected.p[1]);
                     proj_mat.vec_matrix_multiply(clipped[n].p[2], triProjected.p[2]);
-                    // triProjected.color = clipped[n].color;
                     // pass the texture coordinates forward
+                    triProjected.color = clipped[n].color;
                     triProjected.t[0] = clipped[n].t[0];
                     triProjected.t[1] = clipped[n].t[1];
                     triProjected.t[2] = clipped[n].t[2];
                     // scale texture coordinates into view
-                    triProjected.t[0].u = triProjected.t[0].u / triProjected.p[0].v[3];
-                    triProjected.t[1].u = triProjected.t[1].u / triProjected.p[1].v[3];
-                    triProjected.t[2].u = triProjected.t[2].u / triProjected.p[2].v[3];
-                    triProjected.t[0].v = triProjected.t[0].v / triProjected.p[0].v[3];
-                    triProjected.t[1].v = triProjected.t[1].v / triProjected.p[1].v[3];
-                    triProjected.t[2].v = triProjected.t[2].v / triProjected.p[2].v[3];
+                    // triProjected.t[0].u = triProjected.t[0].u / triProjected.p[0].v[3];
+                    // triProjected.t[1].u = triProjected.t[1].u / triProjected.p[1].v[3];
+                    // triProjected.t[2].u = triProjected.t[2].u / triProjected.p[2].v[3];
+                    // triProjected.t[0].v = triProjected.t[0].v / triProjected.p[0].v[3];
+                    // triProjected.t[1].v = triProjected.t[1].v / triProjected.p[1].v[3];
+                    // triProjected.t[2].v = triProjected.t[2].v / triProjected.p[2].v[3];
+                    // triProjected.t[0].w = 1 / triProjected.p[0].v[3];
+                    // triProjected.t[1].w = 1 / triProjected.p[1].v[3];
+                    // triProjected.t[2].w = 1 / triProjected.p[2].v[3];
                     // scale triangle into view, was previously in vec_matrix_multiply, but removed for conciseness
                     triProjected.p[0] = triProjected.p[0].div_vector(triProjected.p[0].v[3]);
                     triProjected.p[1] = triProjected.p[1].div_vector(triProjected.p[1].v[3]);
@@ -210,11 +215,21 @@ class Scene {
                 }
                 newTrianglesCount = listTriangles.length;
             }
+            // console.log("after");
+            // listTriangles.forEach((tri: triangle3d) => {
+            //     console.log(JSON.stringify(tri.t, null, 2));
+            // })
             listTriangles.forEach((tri) => {
+                // tri.p[0].v[0] *= -1; tri.p[0].v[1] *= -1; tri.p[0].v[2] *= -1;
+                // tri.p[1].v[0] *= -1; tri.p[1].v[1] *= -1; tri.p[1].v[2] *= -1;
+                // tri.p[2].v[0] *= -1; tri.p[2].v[1] *= -1; tri.p[2].v[2] *= -1;
+                // tri.t[0].u *= -1; tri.t[0].v *= -1;
+                // tri.t[1].u *= -1; tri.t[1].v *= -1;
+                // tri.t[2].u *= -1; tri.t[2].v *= -1;
                 // rasterizing triangles
-                draw_textured_triangle(tri.p[0].v[0], tri.p[0].v[1], tri.t[0].u, tri.t[0].v, tri.p[1].v[0], tri.p[1].v[1], tri.t[1].u, tri.t[1].v, tri.p[2].v[0], tri.p[2].v[1], tri.t[2].u, tri.t[2].v, this.image, this.ctx);
-                // this.draw2d_triangle(tri.p[0].v[0],tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1]);
-                // this.fill2d_triangle(tri.p[0].v[0],tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1], tri.color);
+                // draw2d_triangle(tri.p[0].v[0],tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1], this.ctx);
+                draw_textured_triangle(tri.p[0].v[0], tri.p[0].v[1], tri.t[0].u, tri.t[0].v, tri.t[0].w, tri.p[1].v[0], tri.p[1].v[1], tri.t[1].u, tri.t[1].v, tri.t[1].w, tri.p[2].v[0], tri.p[2].v[1], tri.t[2].u, tri.t[2].v, tri.t[2].w, this.image, this.ctx);
+                // fill2d_triangle(tris.p[0].v[0],tri.p[0].v[1], tri.p[1].v[0], tri.p[1].v[1], tri.p[2].v[0], tri.p[2].v[1], tri.color, this.ctx);
             });
         });
     }
@@ -225,14 +240,14 @@ class Scene {
                 this.start();
             }
             this.render();
-            console.log(m.stringify());
+            // console.log(m.stringify());
         }, this.interval);
     }
     displaySampledTexture() {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                // const canvas = await sample_rectangle(0, 0, 1024, 512, "../files/minecraft_0.png");
-                const canvas = yield sample_rectangle(80, 80, 16, 16, "../files/image.png");
+                const canvas = yield sample_rectangle(0, 0, 100, 100, "../files/minecraft_0.png");
+                // const canvas = await sample_rectangle(80, 80, 16, 16, "../files/minecraft_0.png");
                 const container = document.getElementById('sampledTexture');
                 if (container) {
                     container.appendChild(canvas);

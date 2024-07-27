@@ -1,3 +1,5 @@
+import { Camera } from "../utils/camera";
+
 export class _number {
     public val = 0;
 }
@@ -6,10 +8,12 @@ export class vec2d {
 
     public u: number;
     public v: number;
+    public w: number;
 
-    constructor (u: number=0, v: number=0) {
+    constructor (u: number=0, v: number=0, w=1) {
         this.u = u;
-        this.v = v; 
+        this.v = v;
+        this.w = w;
 
         this.roundVec();
     }
@@ -171,10 +175,12 @@ export class triangle3d {
             out_tri.p[1] = vec3d.vector_intersect_plane(plane_point, plane_normal, inside_points[0], outside_points[0], t);
             out_tri.t[1].u = t.val * (outside_tex[0].u - inside_tex[0].u) + inside_tex[0].u;
             out_tri.t[1].v = t.val * (outside_tex[0].v - inside_tex[0].v) + inside_tex[0].v;
+            out_tri.t[1].w = t.val * (outside_tex[0].w - inside_tex[0].w) + inside_tex[0].w;
 
             out_tri.p[2] = vec3d.vector_intersect_plane(plane_point, plane_normal, inside_points[0], outside_points[1], t);
             out_tri.t[2].u = t.val * (outside_tex[1].u - inside_tex[0].u) + inside_tex[0].u;
             out_tri.t[2].v = t.val * (outside_tex[1].v - inside_tex[0].v) + inside_tex[0].v;
+            out_tri.t[2].w = t.val * (outside_tex[1].w - inside_tex[0].w) + inside_tex[0].w;
             return 1;
         }
 
@@ -192,10 +198,12 @@ export class triangle3d {
             out_tri.t[0] = inside_tex[0];
             out_tri.t[1] = inside_tex[1];
 
+
             let t = new _number();
             out_tri.p[2] = vec3d.vector_intersect_plane(plane_point, plane_normal, inside_points[0], outside_points[0], t);
             out_tri.t[2].u = t.val * (outside_tex[0].u - inside_tex[0].u) + inside_tex[0].u;
             out_tri.t[2].v = t.val * (outside_tex[0].v - inside_tex[0].v) + inside_tex[0].v;
+            out_tri.t[2].w = t.val * (outside_tex[0].w - inside_tex[0].w) + inside_tex[0].w;
 
             out_tri2.p[0] = inside_points[1];
             out_tri2.t[0] = inside_tex[1];
@@ -206,6 +214,7 @@ export class triangle3d {
             out_tri2.p[2] = vec3d.vector_intersect_plane(plane_point, plane_normal, inside_points[1], outside_points[0], t);
             out_tri2.t[2].u = t.val * (outside_tex[0].u - inside_tex[1].u) + inside_tex[1].u;
             out_tri2.t[2].v = t.val * (outside_tex[0].v - inside_tex[1].v) + inside_tex[1].v;
+            out_tri2.t[2].w = t.val * (outside_tex[0].w - inside_tex[1].w) + inside_tex[1].w;
 
             return 2;
         }
@@ -238,8 +247,8 @@ export class mesh {
             for (let line of lines) {
                 if (line.startsWith('v ')) {
                     const coords = line.split(' ');
-                    const x = -parseFloat(coords[1]);
-                    const y = -parseFloat(coords[2]);
+                    const x = parseFloat(coords[1]);
+                    const y = parseFloat(coords[2]);
                     const z = parseFloat(coords[3]);
                     vertices.push(new vec3d(x, y, z));
 
@@ -264,24 +273,48 @@ export class mesh {
     
     setCubeMesh() {
 
-        this.tris = [
-            new triangle3d(new vec3d(0, 0, 0), new vec3d(0, 1, 0), new vec3d(1, 1, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-            new triangle3d(new vec3d(0, 0, 0), new vec3d(1, 1, 0), new vec3d(1, 0, 0), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+            // new triangle3d(new vec3d(0, 0, 0), new vec3d(0, 1, 0), new vec3d(1, 1, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
+            // new triangle3d(new vec3d(0, 0, 0), new vec3d(1, 1, 0), new vec3d(1, 0, 0), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
 
-            new triangle3d(new vec3d(1, 0, 0), new vec3d(1, 1, 0), new vec3d(1, 1, 1), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-            new triangle3d(new vec3d(1, 0, 0), new vec3d(1, 1, 1), new vec3d(1, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+            // new triangle3d(new vec3d(1, 0, 0), new vec3d(1, 1, 0), new vec3d(1, 1, 1), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
+            // new triangle3d(new vec3d(1, 0, 0), new vec3d(1, 1, 1), new vec3d(1, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
             
-            new triangle3d(new vec3d(0, 1, 0), new vec3d(0, 1, 1), new vec3d(1, 1, 1), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-            new triangle3d(new vec3d(0, 1, 0), new vec3d(1, 1, 1), new vec3d(1, 1, 0), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+            // new triangle3d(new vec3d(0, 1, 0), new vec3d(0, 1, 1), new vec3d(1, 1, 1), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
+            // new triangle3d(new vec3d(0, 1, 0), new vec3d(1, 1, 1), new vec3d(1, 1, 0), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
             
-            new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 0, 0), new vec3d(1, 0, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-            new triangle3d(new vec3d(0, 0, 1), new vec3d(1, 0, 0), new vec3d(1, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+            // new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 0, 0), new vec3d(1, 0, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
+            // new triangle3d(new vec3d(0, 0, 1), new vec3d(1, 0, 0), new vec3d(1, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
             
-            new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 1, 1), new vec3d(0, 1, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-            new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 1, 0), new vec3d(0, 0, 0), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+            // new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 1, 1), new vec3d(0, 1, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
+            // new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 1, 0), new vec3d(0, 0, 0), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
             
-            new triangle3d(new vec3d(1, 0, 1), new vec3d(1, 1, 1), new vec3d(0, 1, 1), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-            new triangle3d(new vec3d(1, 0, 1), new vec3d(0, 1, 1), new vec3d(0, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+            // new triangle3d(new vec3d(1, 0, 1), new vec3d(1, 1, 1), new vec3d(0, 1, 1), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
+            // new triangle3d(new vec3d(1, 0, 1), new vec3d(0, 1, 1), new vec3d(0, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+
+                this.tris = [
+                    // Front face
+                    new triangle3d(new vec3d(0, 0, 0), new vec3d(0, 1, 0), new vec3d(1, 1, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
+                    new triangle3d(new vec3d(0, 0, 0), new vec3d(1, 1, 0), new vec3d(1, 0, 0), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+            
+                    // Right face
+                    new triangle3d(new vec3d(1, 0, 0), new vec3d(1, 1, 0), new vec3d(1, 1, 1), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
+                    new triangle3d(new vec3d(1, 0, 0), new vec3d(1, 1, 1), new vec3d(1, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+            
+                    // Back face
+                    new triangle3d(new vec3d(1, 0, 1), new vec3d(1, 1, 1), new vec3d(0, 1, 1), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
+                    new triangle3d(new vec3d(1, 0, 1), new vec3d(0, 1, 1), new vec3d(0, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+            
+                    // Left face
+                    new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 1, 1), new vec3d(0, 1, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
+                    new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 1, 0), new vec3d(0, 0, 0), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+            
+                    // Top face
+                    new triangle3d(new vec3d(0, 1, 0), new vec3d(0, 1, 1), new vec3d(1, 1, 1), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
+                    new triangle3d(new vec3d(0, 1, 0), new vec3d(1, 1, 1), new vec3d(1, 1, 0), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+            
+                    // Bottom face
+                    new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 0, 0), new vec3d(1, 0, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
+                    new triangle3d(new vec3d(0, 0, 1), new vec3d(1, 0, 0), new vec3d(1, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
         ];
     }
 
@@ -420,7 +453,8 @@ export class mat4x4 {
         return trans_matrix;
     }
     
-    static mat_point_at (pos: vec3d, target: vec3d, up: vec3d) {
+    // pos: vec3d, target: vec3d, up: vec3d)
+    static mat_point_at (camera: Camera) {
         // given a camera vector and its forward direction, we want to be able to point 
         // its forward direction somewhere else, the camera vector is the camera's location
         
@@ -429,13 +463,15 @@ export class mat4x4 {
         // up - vector thats orthogonal to forward vector and points up
 
         // calculate a new forward vector
-        let newForward = target.sub_vector(pos);
+        let newForward = camera.vTarget.sub_vector(camera.v);
         newForward = newForward.normalize();
+        // camera.v = newForward;
     
         // calculate new up vector, in case we rotate the y
-        let a = newForward.mult_vector_scalar(up.dot_product(newForward));
-        let newUp = up.sub_vector(a);
+        let a = newForward.mult_vector_scalar(camera.vUp.dot_product(newForward));
+        let newUp = camera.vUp.sub_vector(a);
         newUp = newUp.normalize();
+        // camera.vUp = newUp;
     
         // calculate a new right vector
         let newRight = newUp.cross_product(newForward);
@@ -445,22 +481,22 @@ export class mat4x4 {
         matrix.mat[0][0] = newRight.v[0];   matrix.mat[0][1] = newRight.v[1];   matrix.mat[0][2] = newRight.v[2];   matrix.mat[0][3] = 0; 
         matrix.mat[1][0] = newUp.v[0];      matrix.mat[1][1] = newUp.v[1];      matrix.mat[1][2] = newUp.v[2];      matrix.mat[1][3] = 0; 
         matrix.mat[2][0] = newForward.v[0]; matrix.mat[2][1] = newForward.v[1]; matrix.mat[2][2] = newForward.v[2]; matrix.mat[2][3] = 0; 
-        matrix.mat[3][0] = pos.v[0];        matrix.mat[3][1] = pos.v[1];        matrix.mat[3][2] = pos.v[2];        matrix.mat[3][3] = 1; 
+        matrix.mat[3][0] = camera.v.v[0];   matrix.mat[3][1] = camera.v.v[1];   matrix.mat[3][2] = camera.v.v[2];   matrix.mat[3][3] = 1; 
         return matrix;
     }
 
     // works only for orthogonal matrices, i.e. rotation, translation matrices
     static quick_inverse (mat: mat4x4) {
-    let matrix = new mat4x4();
-    matrix.mat[0][0] = mat.mat[0][0]; matrix.mat[0][1] = mat.mat[1][0]; matrix.mat[0][2] = mat.mat[2][0]; matrix.mat[0][3] = 0.0;
-    matrix.mat[1][0] = mat.mat[0][1]; matrix.mat[1][1] = mat.mat[1][1]; matrix.mat[1][2] = mat.mat[2][1]; matrix.mat[1][3] = 0.0;
-    matrix.mat[2][0] = mat.mat[0][2]; matrix.mat[2][1] = mat.mat[1][2]; matrix.mat[2][2] = mat.mat[2][2]; matrix.mat[2][3] = 0.0;
-    matrix.mat[3][0] = -(mat.mat[3][0] * matrix.mat[0][0] + mat.mat[3][1] * matrix.mat[1][0] + mat.mat[3][2] * matrix.mat[2][0]);
-    matrix.mat[3][1] = -(mat.mat[3][0] * matrix.mat[0][1] + mat.mat[3][1] * matrix.mat[1][1] + mat.mat[3][2] * matrix.mat[2][1]);
-    matrix.mat[3][2] = -(mat.mat[3][0] * matrix.mat[0][2] + mat.mat[3][1] * matrix.mat[1][2] + mat.mat[3][2] * matrix.mat[2][2]);
-    matrix.mat[3][3] = 1.0;
-    return matrix;
-}
+        let matrix = new mat4x4();
+        matrix.mat[0][0] = mat.mat[0][0]; matrix.mat[0][1] = mat.mat[1][0]; matrix.mat[0][2] = mat.mat[2][0]; matrix.mat[0][3] = 0.0;
+        matrix.mat[1][0] = mat.mat[0][1]; matrix.mat[1][1] = mat.mat[1][1]; matrix.mat[1][2] = mat.mat[2][1]; matrix.mat[1][3] = 0.0;
+        matrix.mat[2][0] = mat.mat[0][2]; matrix.mat[2][1] = mat.mat[1][2]; matrix.mat[2][2] = mat.mat[2][2]; matrix.mat[2][3] = 0.0;
+        matrix.mat[3][0] = -(mat.mat[3][0] * matrix.mat[0][0] + mat.mat[3][1] * matrix.mat[1][0] + mat.mat[3][2] * matrix.mat[2][0]);
+        matrix.mat[3][1] = -(mat.mat[3][0] * matrix.mat[0][1] + mat.mat[3][1] * matrix.mat[1][1] + mat.mat[3][2] * matrix.mat[2][1]);
+        matrix.mat[3][2] = -(mat.mat[3][0] * matrix.mat[0][2] + mat.mat[3][1] * matrix.mat[1][2] + mat.mat[3][2] * matrix.mat[2][2]);
+        matrix.mat[3][3] = 1.0;
+        return matrix;
+    }
 }
 
 
