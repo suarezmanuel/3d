@@ -25,6 +25,7 @@ export class vec2d {
     roundVec () {
         this.u = this.round(this.u);
         this.v = this.round(this.v);
+        this.w = this.round(this.w);
     }
 } 
 
@@ -471,7 +472,7 @@ export class mat4x4 {
         let a = newForward.mult_vector_scalar(camera.vUp.dot_product(newForward));
         let newUp = camera.vUp.sub_vector(a);
         newUp = newUp.normalize();
-        // camera.vUp = newUp;
+        camera.vUp = newUp;
     
         // calculate a new right vector
         let newRight = newUp.cross_product(newForward);
@@ -482,6 +483,7 @@ export class mat4x4 {
         matrix.mat[1][0] = newUp.v[0];      matrix.mat[1][1] = newUp.v[1];      matrix.mat[1][2] = newUp.v[2];      matrix.mat[1][3] = 0; 
         matrix.mat[2][0] = newForward.v[0]; matrix.mat[2][1] = newForward.v[1]; matrix.mat[2][2] = newForward.v[2]; matrix.mat[2][3] = 0; 
         matrix.mat[3][0] = camera.v.v[0];   matrix.mat[3][1] = camera.v.v[1];   matrix.mat[3][2] = camera.v.v[2];   matrix.mat[3][3] = 1; 
+        // return [matrix, newUp];
         return matrix;
     }
 

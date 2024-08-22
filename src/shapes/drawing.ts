@@ -116,7 +116,7 @@ export function draw_textured_triangle (x1: number, y1: number, u1: number, v1: 
             tex_w = tex_sw;
 
             let tstep = 1 / (bx - ax);
-            console.log(tstep);
+            // console.log(tstep);
             let t = 0;
 
             for (let j = ax; j < bx; j++) {
@@ -125,8 +125,9 @@ export function draw_textured_triangle (x1: number, y1: number, u1: number, v1: 
                 tex_v = (1 - t) * tex_sv + t * tex_ev;
                 tex_w = (1 - t) * tex_sw + t * tex_ew;
                 
-                // let pixel = tex.sample_pixel(tex_u / tex_w, tex_v / tex_w, 0, 100);
-                let pixel = tex.sample_pixel(tex_u / tex_w,(1-tex_v) / tex_w, 80, 16);
+                // console.log(JSON.stringify(tex_w, null, 2));
+                let pixel = tex.sample_pixel(tex_u / tex_w, tex_v / tex_w, 80, 16);
+                // let pixel = tex.sample_pixel(tex_u / tex_w,(1-tex_v) / tex_w, 80, 16);
                 ctx.fillStyle = `rgba(${pixel[0]},${pixel[1]},${pixel[2]},${pixel[3]})`;
                 ctx.fillRect(j, i, 1, 1);
                 
@@ -147,6 +148,7 @@ export function draw_textured_triangle (x1: number, y1: number, u1: number, v1: 
 
     du1_step = 0;
     dv1_step = 0;
+    dw1_step = 0;
     if (dy1) du1_step = du1 / Math.abs(dy1);
     if (dy1) dv1_step = dv1 / Math.abs(dy1);
     if (dy1) dw1_step = dw1 / Math.abs(dy1);
@@ -167,7 +169,10 @@ export function draw_textured_triangle (x1: number, y1: number, u1: number, v1: 
             let tex_ew = w1 + (i - y1) * dw2_step;
 
             if (ax > bx) {
-                [ax, bx, tex_su, tex_eu, tex_sv, tex_ev, tex_sw, tex_ew] = [bx, ax, tex_eu, tex_su, tex_ev, tex_sv, tex_ew, tex_sw];
+                [ax, bx] = [bx, ax];
+                [tex_su, tex_eu] = [tex_eu, tex_su];
+                [tex_sv, tex_ev] = [tex_ev, tex_sv];
+                [tex_sw, tex_ew] = [tex_ew, tex_sw];
             }
 
             tex_u = tex_su;
@@ -183,8 +188,8 @@ export function draw_textured_triangle (x1: number, y1: number, u1: number, v1: 
                 tex_v = (1 - t) * tex_sv + t * tex_ev;
                 tex_w = (1 - t) * tex_sw + t * tex_ew;
                 
-                // let pixel = tex.sample_pixel(tex_u / tex_w, tex_v / tex_w, 0, 100);
-                let pixel = tex.sample_pixel(tex_u / tex_w,(1-tex_v) / tex_w, 80, 16);
+                let pixel = tex.sample_pixel(tex_u / tex_w, tex_v / tex_w, 80, 16);
+                // let pixel = tex.sample_pixel(tex_u / tex_w,(1-tex_v) / tex_w, 80, 16);
                 ctx.fillStyle = `rgba(${pixel[0]},${pixel[1]},${pixel[2]},${pixel[3]})`;
                 ctx.fillRect(j, i, 1, 1);
                 // console.log(tex_u-tex_v);
