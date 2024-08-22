@@ -38,4 +38,7 @@ more specifically, goto `localhost:8000/src/main.html`.
 
 <img width="613" alt="image" src="https://github.com/user-attachments/assets/e37d12a8-07b8-4a45-9c0a-3fa6b5367bc6">
 
+<img width="513" alt="image" src="https://github.com/user-attachments/assets/5a2c17dc-0c88-4629-9a85-1ecbb49ad550">
+
+
 
