@@ -26,74 +26,47 @@ export class Camera {
         this.lookSpeed = lookSpeed;
     }
 
-    move_camera_up(n: number) {
-        this.v.v[1] -= n;
-    }
-
-    move_camera_down(n: number) {
-        this.v.v[1] += n;
-    }
-
-    move_camera_right(n: number) {
-        this.v.v[0] += n;
-    }
-
-    move_camera_left(n: number) {
-        this.v.v[0] -= n;
-    }
-
     updateMovement (elapsed_time: number, dx: number, dy: number) {
 
-        // if (Math.abs(dx) <= 0.01) dx = 0;
-        // if (Math.abs(dy) <= 0.01) dy = 0;
         this.fYaw   += (dx * Math.PI) * this.lookSpeed * elapsed_time;
-        this.fPitch -= (dy * Math.PI/2) * this.lookSpeed * elapsed_time;
-        // if (this.keys['arrowleft']) {
-        //     this.fYaw -= this.moveSpeed / 10 * elapsed_time;
-        // }
-        // if (this.keys['arrowright']) {
-        //     this.fYaw += this.moveSpeed / 10 * elapsed_time;
-        // }
-        // if (this.keys['arrowup']) {
-        //     this.fPitch += this.moveSpeed / 10 * elapsed_time;
-        // }
-        // if (this.keys['arrowdown']) {
-        //     this.fPitch -= this.moveSpeed / 10 * elapsed_time;
-        // }
-        // console.log(this.shift);
+        let a = (dy * Math.PI/2) * this.lookSpeed * elapsed_time;
+        this.fPitch = (Math.abs(this.fPitch - a) < 0.99*Math.PI/2) ? this.fPitch - a : Math.sign(this.fPitch)*0.99*Math.PI/2;
+        let vForward = this.vLookDirection.mult_vector_scalar( this.moveSpeed * elapsed_time);
+
         if (this.keys[' ']) {
-            this.move_camera_up(this.moveSpeed * elapsed_time);
+            // move up
+            this.v.v[1] -= this.moveSpeed * elapsed_time;
         }
         if (this.keys['shift']) {
-            this.move_camera_down(this.moveSpeed * elapsed_time);
+            // move down
+            this.v.v[1] += this.moveSpeed * elapsed_time;
         }
         if (this.keys['a']) {
-            let vForwarddd = this.vLookDirection.mult_vector_scalar( this.moveSpeed * elapsed_time);
-            let a = vForwarddd.cross_product(this.vUp); 
+            // this.v.v[0] -= this.moveSpeed * elapsed_time;
+            let a = vForward.cross_product(this.vUp); 
             this.v = this.v.add_vector(a);
         }
         if (this.keys['d']) {
-            let vForwardddd = this.vLookDirection.mult_vector_scalar( this.moveSpeed * elapsed_time);
-            // let b = new vec3d(0,1,0).cross_product(vForwardddd); 
-            let b = this.vUp.cross_product(vForwardddd); 
+            // this.v.v[0] += this.moveSpeed * elapsed_time;
+            let b = this.vUp.cross_product(vForward); 
             this.v = this.v.add_vector(b);
         }
         if (this.keys['w']) {
-            // we want to travel along the lookDir vector
-            // thus we define a velocity vector as such
-            let vForward = this.vLookDirection.mult_vector_scalar( this.moveSpeed * elapsed_time);
+            // this.v.v[2] += this.moveSpeed * elapsed_time;
+            let vForwardP = new vec3d();
+            // vForwardP.v[0] = vForward.v[0]; vForwardP.v[2] = vForward.v[2]; 
             this.v = this.v.add_vector(vForward);
         }
         if (this.keys['s']) {
-            let vForwardd = this.vLookDirection.mult_vector_scalar( this.moveSpeed * elapsed_time);
-            this.v = this.v.sub_vector(vForwardd);
+            // this.v.v[2] -= this.moveSpeed * elapsed_time;
+            let vForwardP = new vec3d();
+            // vForwardP.v[0] = vForward.v[0]; vForwardP.v[2] = vForward.v[2]; 
+            this.v = this.v.sub_vector(vForward);
         }
     }
 
     // lookdir, vtarget
     getViewMatrix () {
-
-        // this.fPitch = (Math.abs(this.fPitch) >= 0.99*Math.PI/2) ? Math.sign(this.fPitch) * (0.99*Math.PI/2) : this.fPitch;
         this.vUp = new vec3d(0,1,0);
         this.vTarget = new vec3d(0,0,1);
         // rotate it along the y axis, turning left or right

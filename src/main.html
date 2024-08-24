@@ -1,33 +1,45 @@
-<!-- main.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <tit§le>3D Engine</title>
+    <title>3D Engine</title>
+    <style>
+        html, body {
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #canvas {
+            width: 90vw; /* 90% of the viewport width */
+            height: 90vh; /* 90% of the viewport height */
+            display: block;
+            background-color: #000; /* Optional: set a background color */
+        }
+    </style>
 </head>
 <body>
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+        <div>
+            <label for="fpsCap">FPS CAP:</label>
+            <input type="range" id="fpsCap" min="30" max="500" step="10" value="60">
+            <span id="fpsCapValue" style="padding-right: 30px;">60</span>
+        </div>
+        <div id="fps-counter">FPS: 0</div>
 
-    <div>
-        <label for="fpsCap">FPS CAP:</label>
-        <input type="range" id="fpsCap" min="30" max="500" step="10" value="60">
-        <span id="fpsCapValue" style="padding-right: 30px;">60</span>
-    </div>
-    <div id="fps-counter">FPS: 0</div>
+        <canvas id="canvas"></canvas>
+        <div id="sampledTexture"></div>
+        <div>   
+            <label for="Fov">Fov:</label>
+            <input type="range" id="Fov" min="30" max="270" step="10" value="90">
+            <span id="FovValue" style="padding-right: 30px;">90</span>
+        </div>
 
-    <canvas id="canvas" width="600" height="600"></canvas>
-
-    <div id="sampledTexture"></div>
-
-    <div>
-        <label for="Fov">Fov:</label>
-        <input type="range" id="Fov" min="30" max="270" step="10" value="90">
-        <span id="FovValue" style="padding-right: 30px;">90</span>
-    </div>
-
-    <div>
-        <label for="Distance">Distance:</label>
-        <input type="range" id="Distance" min="0" max="2000" step="2" value="500">
-        <span id="DistanceValue" style="padding-right: 30px;">500</span>
+        <div>
+            <label for="Distance">Distance:</label>
+            <input type="range" id="Distance" min="0" max="2000" step="2" value="500">
+            <span id="DistanceValue" style="padding-right: 30px;">500</span>
+        </div>
     </div>
 
     <script type="module" src="../dst/main.js"></script>

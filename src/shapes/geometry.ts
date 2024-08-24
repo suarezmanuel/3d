@@ -101,7 +101,7 @@ export class triangle3d {
     public t: [vec2d, vec2d, vec2d];
     public color: string;
 
-    constructor(a: vec3d, b: vec3d, c: vec3d, d: vec2d, e: vec2d, f: vec2d, color="rgb(255,255,255)") {
+    constructor(a: vec3d, b: vec3d, c: vec3d, d: vec2d, e: vec2d, f: vec2d, color="") {
         this.p = [a, b, c];
         this.t = [d, e, f];
         // this.t = [new vec2d(d.u, d.v), new vec2d(e.u, e.v), new vec2d(f.u, f.v)];
@@ -222,6 +222,44 @@ export class triangle3d {
 
         return 0;
     }
+
+    static clip_triangles_against_screen (listTriangles: triangle3d[], newTrianglesCount: number, clipped: triangle3d[], canvas: HTMLCanvasElement) {
+
+        for (let p=0; p < 4; p++) {
+
+            let trisToAdd = 0;
+            while (newTrianglesCount > 0) {
+
+                let test = listTriangles.pop()!;
+                newTrianglesCount--;
+
+                switch(p) {
+                    
+                    case 0:
+                        trisToAdd = triangle3d.triangle_clip_against_plane(new vec3d(0,0,0), new vec3d(0,1,0), test, clipped[0], clipped[1]);
+                        break;
+                    case 1:
+                        trisToAdd = triangle3d.triangle_clip_against_plane(new vec3d(0,canvas.height -1,0), new vec3d(0,-1,0), test, clipped[0], clipped[1]);
+                        break;
+                    case 2:
+                        trisToAdd = triangle3d.triangle_clip_against_plane(new vec3d(1,0,0), new vec3d(1,0,0), test, clipped[0], clipped[1]);
+                        break;
+                    case 3:
+                        trisToAdd = triangle3d.triangle_clip_against_plane(new vec3d(canvas.width-1,0,0), new vec3d(-1,0,0), test, clipped[0], clipped[1]);
+                        break;
+                }
+
+                for (let w = 0; w < trisToAdd; w++) {
+
+                    listTriangles.unshift(clipped[w]);
+                }
+                clipped = [new triangle3d(new vec3d(),new vec3d(),new vec3d(), new vec2d(), new vec2d(), new vec2d()),
+                        new triangle3d(new vec3d(),new vec3d(),new vec3d(), new vec2d(), new vec2d(), new vec2d())];
+            }
+
+            newTrianglesCount = listTriangles.length;
+        }
+    }
 }
 
 export class mesh {
@@ -272,50 +310,32 @@ export class mesh {
         }
     }
     
-    setCubeMesh() {
-
-            // new triangle3d(new vec3d(0, 0, 0), new vec3d(0, 1, 0), new vec3d(1, 1, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-            // new triangle3d(new vec3d(0, 0, 0), new vec3d(1, 1, 0), new vec3d(1, 0, 0), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
-
-            // new triangle3d(new vec3d(1, 0, 0), new vec3d(1, 1, 0), new vec3d(1, 1, 1), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-            // new triangle3d(new vec3d(1, 0, 0), new vec3d(1, 1, 1), new vec3d(1, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
-            
-            // new triangle3d(new vec3d(0, 1, 0), new vec3d(0, 1, 1), new vec3d(1, 1, 1), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-            // new triangle3d(new vec3d(0, 1, 0), new vec3d(1, 1, 1), new vec3d(1, 1, 0), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
-            
-            // new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 0, 0), new vec3d(1, 0, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-            // new triangle3d(new vec3d(0, 0, 1), new vec3d(1, 0, 0), new vec3d(1, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
-            
-            // new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 1, 1), new vec3d(0, 1, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-            // new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 1, 0), new vec3d(0, 0, 0), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
-            
-            // new triangle3d(new vec3d(1, 0, 1), new vec3d(1, 1, 1), new vec3d(0, 1, 1), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-            // new triangle3d(new vec3d(1, 0, 1), new vec3d(0, 1, 1), new vec3d(0, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+    setCubeMesh(x: number, y: number, z: number) {
 
                 this.tris = [
                     // Front face
-                    new triangle3d(new vec3d(0, 0, 0), new vec3d(0, 1, 0), new vec3d(1, 1, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-                    new triangle3d(new vec3d(0, 0, 0), new vec3d(1, 1, 0), new vec3d(1, 0, 0), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+                    new triangle3d(new vec3d(x+0, y+0, z+0), new vec3d(x+0, y+1, z+0), new vec3d(x+1, y+1, z+0), new vec2d(0, 1, 1), new vec2d(0, 0, 1), new vec2d(1, 0, 1)),
+                    // new triangle3d(new vec3d(x+0, y+0, z+0), new vec3d(x+1, y+1, z+0), new vec3d(x+1, y+0, z+0), new vec2d(0, 1, 1), new vec2d(1, 0, 1), new vec2d(1, 1, 1)),
             
-                    // Right face
-                    new triangle3d(new vec3d(1, 0, 0), new vec3d(1, 1, 0), new vec3d(1, 1, 1), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-                    new triangle3d(new vec3d(1, 0, 0), new vec3d(1, 1, 1), new vec3d(1, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+                    // // Right face
+                    // new triangle3d(new vec3d(x+1, y+0, z+0), new vec3d(x+1, y+1, z+0), new vec3d(x+1, y+1, z+1), new vec2d(0, 1, 1), new vec2d(0, 0, 1), new vec2d(1, 0, 1)),
+                    // new triangle3d(new vec3d(x+1, y+0, z+0), new vec3d(x+1, y+1, z+1), new vec3d(x+1, y+0, z+1), new vec2d(0, 1, 1), new vec2d(1, 0, 1), new vec2d(1, 1, 1)),
             
-                    // Back face
-                    new triangle3d(new vec3d(1, 0, 1), new vec3d(1, 1, 1), new vec3d(0, 1, 1), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-                    new triangle3d(new vec3d(1, 0, 1), new vec3d(0, 1, 1), new vec3d(0, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+                    // // Back face
+                    // new triangle3d(new vec3d(x+1, y+0, z+1), new vec3d(x+1, y+1, z+1), new vec3d(x+0, y+1, z+1), new vec2d(0, 1, 1), new vec2d(0, 0, 1), new vec2d(1, 0, 1)),
+                    // new triangle3d(new vec3d(x+1, y+0, z+1), new vec3d(x+0, y+1, z+1), new vec3d(x+0, y+0, z+1), new vec2d(0, 1, 1), new vec2d(1, 0, 1), new vec2d(1, 1, 1)),
             
-                    // Left face
-                    new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 1, 1), new vec3d(0, 1, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-                    new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 1, 0), new vec3d(0, 0, 0), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+                    // // Left face
+                    // new triangle3d(new vec3d(x+0, y+0, z+1), new vec3d(x+0, y+1, z+1), new vec3d(x+0, y+1, z+0), new vec2d(0, 1, 1), new vec2d(0, 0, 1), new vec2d(1, 0, 1)),
+                    // new triangle3d(new vec3d(x+0, y+0, z+1), new vec3d(x+0, y+1, z+0), new vec3d(x+0, y+0, z+0), new vec2d(0, 1, 1), new vec2d(1, 0, 1), new vec2d(1, 1, 1)),
             
-                    // Top face
-                    new triangle3d(new vec3d(0, 1, 0), new vec3d(0, 1, 1), new vec3d(1, 1, 1), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-                    new triangle3d(new vec3d(0, 1, 0), new vec3d(1, 1, 1), new vec3d(1, 1, 0), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+                    // // Top face
+                    // new triangle3d(new vec3d(x+0, y+1, z+0), new vec3d(x+0, y+1, z+1), new vec3d(x+1, y+1, z+1), new vec2d(0, 1, 1), new vec2d(0, 0, 1), new vec2d(1, 0, 1)),
+                    // new triangle3d(new vec3d(x+0, y+1, z+0), new vec3d(x+1, y+1, z+1), new vec3d(x+1, y+1, z+0), new vec2d(0, 1, 1), new vec2d(1, 0, 1), new vec2d(1, 1, 1)),
             
-                    // Bottom face
-                    new triangle3d(new vec3d(0, 0, 1), new vec3d(0, 0, 0), new vec3d(1, 0, 0), new vec2d(0, 1), new vec2d(0, 0), new vec2d(1, 0)),
-                    new triangle3d(new vec3d(0, 0, 1), new vec3d(1, 0, 0), new vec3d(1, 0, 1), new vec2d(0, 1), new vec2d(1, 0), new vec2d(1, 1)),
+                    // // Bottom face
+                    // new triangle3d(new vec3d(x+0, y+0, z+1), new vec3d(x+0, y+0, z+0), new vec3d(x+1, y+0, z+0), new vec2d(0, 1, 1), new vec2d(0, 0, 1), new vec2d(1, 0, 1)),
+                    // new triangle3d(new vec3d(x+0, y+0, z+1), new vec3d(x+1, y+0, z+0), new vec3d(x+1, y+0, z+1), new vec2d(0, 1, 1), new vec2d(1, 0, 1), new vec2d(1, 1, 1)),
         ];
     }
 

@@ -80,8 +80,7 @@ export class png_sampler {
   }
 }
 
-export async function sample_rectangle(x: number, y: number, width: number, height: number, imgSrc: string): Promise<HTMLCanvasElement> {
-
+export async function sample_rectangle(x: number, y: number, canvasWidth: number, canvasHeight: number, imgWidth: number, imgHeight: number, imgSrc: string): Promise<HTMLCanvasElement> {
   let sampler = new png_sampler();
   await sampler.init_sampler(imgSrc);
 
@@ -90,16 +89,23 @@ export async function sample_rectangle(x: number, y: number, width: number, heig
   }
 
   const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = canvasWidth;
+  canvas.height = canvasHeight;
   const ctx = canvas.getContext('2d')!;
-  const imageData = ctx.createImageData(width, height);
+  const imageData = ctx.createImageData(canvasWidth, canvasHeight);
 
   console.time("sampling pixels");
-  for (let j = 0; j < height; j++) {
-    for (let i = 0; i < width; i++) {
-      const pixel = sampler.sample_pixel(x + i, y + j, 0, 1);
-      const offset = (j * width + i) * 4;
+  for (let j = 0; j < canvasHeight; j++) {
+    for (let i = 0; i < canvasWidth; i++) {
+      // Calculate the corresponding position in the original image
+      const imgX = x + (i / canvasWidth) * imgWidth;
+      const imgY = y + (j / canvasHeight) * imgHeight;
+      
+      // Sample the pixel from the original image
+      const pixel = sampler.sample_pixel(imgX, imgY, 0, 1);
+      
+      // Set the pixel in the canvas image data
+      const offset = (j * canvasWidth + i) * 4;
       imageData.data.set(pixel, offset);
     }
   }

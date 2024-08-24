@@ -30,11 +30,14 @@ export function fill2d_triangle(a1: number, a2: number, b1: number, b2: number, 
 export function draw_textured_triangle (x1: number, y1: number, u1: number, v1: number, w1: number,
                                         x2: number, y2: number, u2: number, v2: number, w2: number,
                                         x3: number, y3: number, u3: number, v3: number, w3: number,
-                                        tex: png_sampler, ctx: CanvasRenderingContext2D) {
+                                        tex: png_sampler, ctx: CanvasRenderingContext2D, depthBuffer: number[]) {
 
     // let arr = [x1, y1, x2, y2, x3, y3];
     // arr.forEach((x) => Math.floor(x));
     // [x1, y1, x2, y2, x3, y3] = arr;
+
+    const imageData = ctx.getImageData(0,0,ctx.canvas.width, ctx.canvas.height);
+    const data = imageData.data;
 
     // Sort the vertices by y-coordinate (y1 <= y2 <= y3)
     if (y2 < y1) {
@@ -91,6 +94,9 @@ export function draw_textured_triangle (x1: number, y1: number, u1: number, v1: 
     if (dy2) dv2_step = dv2 / Math.abs(dy2);
     if (dy2) dw2_step = dw2 / Math.abs(dy2);
 
+    // var startTime = performance.now();
+    // console.profile('drawing')
+
     // First half of the triangle
     if (dy1) {
 
@@ -116,7 +122,6 @@ export function draw_textured_triangle (x1: number, y1: number, u1: number, v1: 
             tex_w = tex_sw;
 
             let tstep = 1 / (bx - ax);
-            // console.log(tstep);
             let t = 0;
 
             for (let j = ax; j < bx; j++) {
@@ -125,76 +130,93 @@ export function draw_textured_triangle (x1: number, y1: number, u1: number, v1: 
                 tex_v = (1 - t) * tex_sv + t * tex_ev;
                 tex_w = (1 - t) * tex_sw + t * tex_ew;
                 
-                // console.log(JSON.stringify(tex_w, null, 2));
-                let pixel = tex.sample_pixel(tex_u / tex_w, tex_v / tex_w, 80, 16);
-                // let pixel = tex.sample_pixel(tex_u / tex_w,(1-tex_v) / tex_w, 80, 16);
-                ctx.fillStyle = `rgba(${pixel[0]},${pixel[1]},${pixel[2]},${pixel[3]})`;
-                ctx.fillRect(j, i, 1, 1);
+                // if (tex_w > depthBuffer[i*ctx.canvas.width+j]) {
+                    // let a = performance.now();
+                    let pixel = tex.sample_pixel(tex_u / tex_w, tex_v / tex_w, 80, 16);
+                    ctx.fillStyle = `rgba(${pixel[0]},${pixel[1]},${pixel[2]},${pixel[3]})`;
+                    // let index = (i*ctx.canvas.width+j)*4
+
+                    // data[index] = pixel[0];
+                    // data[index+1] = pixel[1];
+                    // data[index+2] = pixel[2];
+                    // data[index+3] = pixel[3];
+
+                    ctx.fillRect(j, i, 1, 1);
+                    
+                    // depthBuffer[i*ctx.canvas.width+j] = tex_w;
+                    // console.log(performance.now() - a);
+                // }
                 
                 t += tstep;
             }
         }
     }
+    // console.trace('drawing')
+    // console.profileEnd('drawing')
 
+    // console.log(performance.now() - startTime);
     // Second half of the triangle
-    dy1 = y3 - y2;
-    dx1 = x3 - x2;
-    dv1 = v3 - v2;
-    du1 = u3 - u2;
-    dw1 = w3 - w2;
+    // dy1 = y3 - y2;
+    // dx1 = x3 - x2;
+    // dv1 = v3 - v2;
+    // du1 = u3 - u2;
+    // dw1 = w3 - w2;
 
-    if (dy1) dax_step = dx1 / Math.abs(dy1);
-    if (dy2) dbx_step = dx2 / Math.abs(dy2);
+    // if (dy1) dax_step = dx1 / Math.abs(dy1);
+    // if (dy2) dbx_step = dx2 / Math.abs(dy2);
 
-    du1_step = 0;
-    dv1_step = 0;
-    dw1_step = 0;
-    if (dy1) du1_step = du1 / Math.abs(dy1);
-    if (dy1) dv1_step = dv1 / Math.abs(dy1);
-    if (dy1) dw1_step = dw1 / Math.abs(dy1);
+    // du1_step = 0;
+    // dv1_step = 0;
+    // dw1_step = 0;
+    // if (dy1) du1_step = du1 / Math.abs(dy1);
+    // if (dy1) dv1_step = dv1 / Math.abs(dy1);
+    // if (dy1) dw1_step = dw1 / Math.abs(dy1);
 
-    if (dy1) {
+    // if (dy1) {
             
-        for (let i = y2; i <= y3; i++) {
+    //     for (let i = y2; i <= y3; i++) {
 
-            let ax = x2 + (i - y2) * dax_step;
-            let bx = x1 + (i - y1) * dbx_step;
+    //         let ax = x2 + (i - y2) * dax_step;
+    //         let bx = x1 + (i - y1) * dbx_step;
 
-            let tex_su = u2 + (i - y2) * du1_step;
-            let tex_sv = v2 + (i - y2) * dv1_step;
-            let tex_sw = w2 + (i - y2) * dw1_step;
+    //         let tex_su = u2 + (i - y2) * du1_step;
+    //         let tex_sv = v2 + (i - y2) * dv1_step;
+    //         let tex_sw = w2 + (i - y2) * dw1_step;
 
-            let tex_eu = u1 + (i - y1) * du2_step;
-            let tex_ev = v1 + (i - y1) * dv2_step;
-            let tex_ew = w1 + (i - y1) * dw2_step;
+    //         let tex_eu = u1 + (i - y1) * du2_step;
+    //         let tex_ev = v1 + (i - y1) * dv2_step;
+    //         let tex_ew = w1 + (i - y1) * dw2_step;
 
-            if (ax > bx) {
-                [ax, bx] = [bx, ax];
-                [tex_su, tex_eu] = [tex_eu, tex_su];
-                [tex_sv, tex_ev] = [tex_ev, tex_sv];
-                [tex_sw, tex_ew] = [tex_ew, tex_sw];
-            }
+    //         if (ax > bx) {
+    //             [ax, bx] = [bx, ax];
+    //             [tex_su, tex_eu] = [tex_eu, tex_su];
+    //             [tex_sv, tex_ev] = [tex_ev, tex_sv];
+    //             [tex_sw, tex_ew] = [tex_ew, tex_sw];
+    //         }
 
-            tex_u = tex_su;
-            tex_v = tex_sv;
-            tex_w = tex_sw;
+    //         tex_u = tex_su;
+    //         tex_v = tex_sv;
+    //         tex_w = tex_sw;
 
-            let tstep = 1 / Math.abs(bx - ax);
-            let t = 0;
+    //         let tstep = 1 / Math.abs(bx - ax);
+    //         let t = 0;
 
-            for (let j = ax; j < bx; j++) {
+    //         for (let j = ax; j < bx; j++) {
 
-                tex_u = (1 - t) * tex_su + t * tex_eu;
-                tex_v = (1 - t) * tex_sv + t * tex_ev;
-                tex_w = (1 - t) * tex_sw + t * tex_ew;
+    //             tex_u = (1 - t) * tex_su + t * tex_eu;
+    //             tex_v = (1 - t) * tex_sv + t * tex_ev;
+    //             tex_w = (1 - t) * tex_sw + t * tex_ew;
                 
-                let pixel = tex.sample_pixel(tex_u / tex_w, tex_v / tex_w, 80, 16);
-                // let pixel = tex.sample_pixel(tex_u / tex_w,(1-tex_v) / tex_w, 80, 16);
-                ctx.fillStyle = `rgba(${pixel[0]},${pixel[1]},${pixel[2]},${pixel[3]})`;
-                ctx.fillRect(j, i, 1, 1);
-                // console.log(tex_u-tex_v);
-                t += tstep;
-            }
-        }
-    }
+    //             // if (tex_w > depthBuffer[i*ctx.canvas.width+j]) {
+    //                 let pixel = tex.sample_pixel(tex_u / tex_w, tex_v / tex_w, 80, 16);
+    //                 ctx.fillStyle = `rgba(${pixel[0]},${pixel[1]},${pixel[2]},${pixel[3]})`;
+    //                 ctx.fillRect(j, i, 1, 1);
+    //                 depthBuffer[i*ctx.canvas.width+j] = tex_w;
+    //             // }
+
+    //             t += tstep;
+    //         }
+    //     }
+    // }
+    // return depthBuffer;
 }
